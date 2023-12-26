@@ -69,6 +69,61 @@ public:
     const double g = 0.0;
   };
 
+	// Dirichlet boundary conditions.
+	class FunctionG : public Function<dim>
+	{
+	public:
+		// Constructor.
+		FunctionG()
+		{}
+
+		// Evaluation.
+		virtual double
+		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const override
+		{
+			return 1.;
+		}
+	};
+	
+	// Neumann boundary conditions.
+	class FunctionH : public Function<dim>
+	{
+	public:
+		// Constructor.
+		FunctionH()
+		{}
+
+		// Evaluation.
+		virtual double
+		value(const Point<dim> &/*p*/, const unsigned int component =0) const override
+		{
+			if(component == 0)
+				return 0.;
+			else if (component == 1)
+				return 0.;
+			else // if (component == 2)
+				return 0.;
+		}
+		virtual void
+		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override
+		{
+			values[0]=0.0;
+			values[1]=0.0;
+			values[2]=0.0;
+		}
+	};
+
+	// Function for the initial condition.
+	class FunctionU0 : public Function<dim>
+	{
+	public:
+		virtual double
+		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const
+		{
+			return 0.;
+		}
+	};
+
   // Function for inlet velocity. This actually returns an object with four
   // components (one for each velocity component, and one for the pressure), but
   // then only the first three are really used (see the component mask when
@@ -249,13 +304,17 @@ public:
   // Constructor.
   NavierStokes(const std::string  &mesh_file_name_,
          const unsigned int &degree_velocity_,
-         const unsigned int &degree_pressure_)
+         const unsigned int &degree_pressure_,
+				 const double       &T_,
+				 const double       &deltat_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
     , mesh_file_name(mesh_file_name_)
     , degree_velocity(degree_velocity_)
     , degree_pressure(degree_pressure_)
+		, T(T_)
+		, deltat(deltat_)
     , mesh(MPI_COMM_WORLD)
   {}
 
@@ -263,20 +322,25 @@ public:
   void
   setup();
 
-  // Assemble system. We also assemble the pressure mass matrix (needed for the
-  // preconditioner).
-  void
-  assemble();
-
   // Solve system.
   void
   solve();
 
-  // Output results.
-  void
-  output();
-
 protected:
+  
+	// Assemble system. We also assemble the pressure mass matrix (needed for the
+  // preconditioner).
+  void
+  assemble();
+
+	// Solve the problem for one time step.
+	void 
+	solve_time_step();
+  
+	// Output results.
+  void
+  output(const unsigned int &time_step) const;
+
   // MPI parallel. /////////////////////////////////////////////////////////////
 
   // Number of MPI processes.
@@ -302,6 +366,9 @@ protected:
   // Inlet velocity.
   InletVelocity inlet_velocity;
 
+	// Final time.
+	const double T;
+
   // Discretization. ///////////////////////////////////////////////////////////
 
   // Mesh file name.
@@ -312,6 +379,18 @@ protected:
 
   // Polynomial degree used for pressure.
   const unsigned int degree_pressure;
+
+	// TIme step.
+	const double deltat;
+
+	// g(x).
+	FunctionG function_g;
+
+	// h(x).
+	FunctionH function_h;
+
+	// Initial condition.
+	FunctionU0 u_0;
 
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;

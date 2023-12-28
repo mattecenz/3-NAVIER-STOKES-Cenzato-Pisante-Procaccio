@@ -118,7 +118,7 @@ public:
 		virtual double
 		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const
 		{
-			return 0.;
+			return 0.1;
 		}
 	};
 
@@ -138,15 +138,15 @@ public:
     virtual void
     vector_value(const Point<dim> &p, Vector<double> &values) const override
     {
-      values[0] = 2.;
-    values[1]=0.;
+      values[0]=0.2;
+    	values[1]=0.;
     }
 
     virtual double
     value(const Point<dim> &p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 2.;
+        return 0.2;
       else
         return 0.0;
     }
@@ -432,4 +432,4 @@ protected:
   TrilinosWrappers::MPI::BlockVector solution;
 };
 
-#endif
+#endif:

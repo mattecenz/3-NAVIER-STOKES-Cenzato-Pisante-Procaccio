@@ -1,4 +1,4 @@
-#include "NavierStokes.hpp"
+#include "NavierStokes3D.hpp"
 
 void
 NavierStokes::setup()
@@ -271,7 +271,7 @@ NavierStokes::assemble()
           for (unsigned int f = 0; f < cell->n_faces(); ++f)
             {
               if (cell->face(f)->at_boundary() &&
-                  cell->face(f)->boundary_id() == 2)
+                  (cell->face(f)->boundary_id() != 3 && cell->face(f)->boundary_id() != 5))
                 {
                   fe_face_values.reinit(cell, f);
 
@@ -286,7 +286,6 @@ NavierStokes::assemble()
                       
 											for (unsigned int i = 0; i < dofs_per_cell; ++i)
                         {
-
 													cell_rhs(i) +=
 														scalar_product(neumann_loc_tensor,
 														fe_face_values[velocity].value(i,q)) *
@@ -316,7 +315,7 @@ NavierStokes::assemble()
     // We interpolate first the inlet velocity condition alone, then the wall
     // condition alone, so that the latter "win" over the former where the two
     // boundaries touch.
-    boundary_functions[0] = &inlet_velocity;
+    boundary_functions[5] = &inlet_velocity;
     VectorTools::interpolate_boundary_values(dof_handler,
                                              boundary_functions,
                                              boundary_values,
@@ -325,7 +324,9 @@ NavierStokes::assemble()
 
     boundary_functions.clear();
     Functions::ZeroFunction<dim> zero_function(dim + 1);
-    boundary_functions[1] = &zero_function;
+    for(unsigned int i=1;i<11;++i)
+			if(i!=3 && i!=5)
+				boundary_functions[i] = &zero_function;
     VectorTools::interpolate_boundary_values(dof_handler,
                                              boundary_functions,
                                              boundary_values,

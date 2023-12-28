@@ -9,29 +9,29 @@ Point(5) = {0.15,0.2 ,0,lc};
 Point(6) = {0.2 ,0.2 ,0,lc};
 Point(7) = {0.25,0.2 ,0,lc};
 
-Line(1) = {1,2};
-Line(2) = {2,3};
-Line(3) = {3,4};
-Line(4) = {4,1};
+Line(8)= {1,2};
+Line(9)= {2,3};
+Line(10)= {3,4};
+Line(11)= {4,1};
 
-Curve Loop(1) = {1,2,3,4};
+Curve Loop(1) = {8,9,10,11};
 
-Circle(5) = {5,6,7};
-Circle(6) = {7,6,5};
-Curve Loop(2) = {5,6};
+Circle(12) = {5,6,7};
+Circle(13) = {7,6,5};
+Curve Loop(2) = {12,13};
 
 Plane Surface(1) = {1,2};
 
-Physical Curve(1) = {1};
-Physical Curve(2) = {2};
-Physical Curve(3) = {3};
-Physical Curve(4) = {4};
-Physical Curve(5) = {5};
-Physical Curve(6) = {6};
+Physical Line(1) = {8};
+Physical Line(2) = {9};
+Physical Line(3) = {10};
+Physical Line(4) = {11};
+Physical Curve(5) = {12};
+Physical Curve(6) = {13};
 
-//Physical Surface("Rectangle")={1};
+Physical Surface(7)={1};
 
-Mesh.SaveAll=1;
+//Mesh.SaveAll=1;
 Mesh 2;
 Save "cilinder_2D_coarse.msh";
 

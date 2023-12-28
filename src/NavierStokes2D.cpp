@@ -49,9 +49,9 @@ NavierStokes::setup()
     pcout << "  Quadrature points per cell = " << quadrature->size()
           << std::endl;
 
-    quadrature_face = std::make_unique<QGaussSimplex<dim - 1>>(fe->degree + 1);
+    quadrature_boundary = std::make_unique<QGaussSimplex<dim - 1>>(fe->degree + 1);
 
-    pcout << "  Quadrature points per face = " << quadrature_face->size()
+    pcout << "  Quadrature points per boundary cell = " << quadrature_boundary->size()
           << std::endl;
   }
 
@@ -164,16 +164,17 @@ NavierStokes::assemble()
 
   const unsigned int dofs_per_cell = fe->dofs_per_cell;
   const unsigned int n_q           = quadrature->size();
-  const unsigned int n_q_face      = quadrature_face->size();
+  const unsigned int n_q_boundary  = quadrature_boundary->size();
 
   FEValues<dim>     fe_values(*fe,
                           *quadrature,
                           update_values | update_gradients |
                             update_quadrature_points | update_JxW_values);
-  FEFaceValues<dim> fe_face_values(*fe,
-                                   *quadrature_face,
-                                   update_values | update_normal_vectors |
-                                     update_JxW_values);
+  FEFaceValues<dim> fe_boundary_values(*fe,
+                                   *quadrature_boundary,
+                                   update_values | update_quadrature_points |
+																	 update_normal_vectors |
+                                   update_JxW_values);
 
   FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
 	FullMatrix<double> cell_pressure_mass_matrix(dofs_per_cell, dofs_per_cell);
@@ -271,14 +272,14 @@ NavierStokes::assemble()
           for (unsigned int f = 0; f < cell->n_faces(); ++f)
             {
               if (cell->face(f)->at_boundary() &&
-                  cell->face(f)->boundary_id() == 2)
+                  (cell->face(f)->boundary_id() != 1 && cell->face(f)->boundary_id() != 3))
                 {
-                  fe_face_values.reinit(cell, f);
+                  fe_boundary_values.reinit(cell, f);
 
-                  for (unsigned int q = 0; q < n_q_face; ++q)
+                  for (unsigned int q = 0; q < n_q_boundary; ++q)
                     {
 											Vector<double> neumann_loc(dim);
-											function_h.vector_value(fe_face_values.quadrature_point(q),
+											function_h.vector_value(fe_boundary_values.quadrature_point(q),
 											                        neumann_loc);
 											Tensor<1, dim> neumann_loc_tensor;
 											for(unsigned int d=0;d<dim;++d)
@@ -289,8 +290,8 @@ NavierStokes::assemble()
 
 													cell_rhs(i) +=
 														scalar_product(neumann_loc_tensor,
-														fe_face_values[velocity].value(i,q)) *
-														fe_face_values.JxW(q);
+														fe_boundary_values[velocity].value(i,q)) *
+														fe_boundary_values.JxW(q);
 												}
                     }
                 }
@@ -316,7 +317,7 @@ NavierStokes::assemble()
     // We interpolate first the inlet velocity condition alone, then the wall
     // condition alone, so that the latter "win" over the former where the two
     // boundaries touch.
-    boundary_functions[0] = &inlet_velocity;
+    boundary_functions[1] = &inlet_velocity;
     VectorTools::interpolate_boundary_values(dof_handler,
                                              boundary_functions,
                                              boundary_values,
@@ -325,11 +326,9 @@ NavierStokes::assemble()
 
     boundary_functions.clear();
     Functions::ZeroFunction<dim> zero_function(dim + 1);
-    boundary_functions[1] = &zero_function;
-    boundary_functions[2] = &zero_function;
-    boundary_functions[3] = &zero_function;
-    boundary_functions[4] = &zero_function;
-    boundary_functions[5] = &zero_function;
+  	for(unsigned int i=0;i<7;++i)
+			if(i!=3)
+    		boundary_functions[i] = &zero_function;
     VectorTools::interpolate_boundary_values(dof_handler,
                                              boundary_functions,
                                              boundary_values,
@@ -346,7 +345,7 @@ NavierStokes::solve_time_step()
 {
   pcout << "===============================================" << std::endl;
 
-  SolverControl solver_control(2000, 1e-6 * system_rhs.l2_norm());
+  SolverControl solver_control(2000, 1e-2 /** system_rhs.l2_norm()*/);
 
   SolverGMRES<TrilinosWrappers::MPI::BlockVector> solver(solver_control);
 
@@ -354,10 +353,12 @@ NavierStokes::solve_time_step()
   // preconditioner.initialize(system_matrix.block(0, 0),
   //                           pressure_mass.block(1, 1));
 
-  PreconditionBlockTriangular preconditioner;
-  preconditioner.initialize(system_matrix.block(0, 0),
-                            pressure_mass.block(1, 1),
-                            system_matrix.block(1, 0));
+  //PreconditionBlockTriangular preconditioner;
+  //preconditioner.initialize(system_matrix.block(0, 0),
+  //                          pressure_mass.block(1, 1),
+  //                          system_matrix.block(1, 0));
+
+	PreconditionIdentity preconditioner;
 
   pcout << "Solving the linear system" << std::endl;
   solver.solve(system_matrix, solution_owned, system_rhs, preconditioner);

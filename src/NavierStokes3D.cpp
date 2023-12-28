@@ -172,8 +172,9 @@ NavierStokes::assemble()
                             update_quadrature_points | update_JxW_values);
   FEFaceValues<dim> fe_face_values(*fe,
                                    *quadrature_face,
-                                   update_values | update_normal_vectors |
-                                     update_JxW_values);
+                                   update_values | update_quadrature_points | 
+																	 update_normal_vectors |
+                                   update_JxW_values);
 
   FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
 	FullMatrix<double> cell_pressure_mass_matrix(dofs_per_cell, dofs_per_cell);

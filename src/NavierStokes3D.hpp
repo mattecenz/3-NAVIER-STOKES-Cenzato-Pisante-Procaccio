@@ -120,7 +120,7 @@ public:
 		virtual double
 		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const
 		{
-			return 0.;
+			return 0.1;
 		}
 	};
 
@@ -140,7 +140,7 @@ public:
     virtual void
     vector_value(const Point<dim> &p, Vector<double> &values) const override
     {
-      values[0] = -alpha * p[1] * (2.0 - p[1]) * (1.0 - p[2]) * (2.0 - p[2]);
+      values[0] = 1.; 
 
       for (unsigned int i = 1; i < dim + 1; ++i)
         values[i] = 0.0;
@@ -150,7 +150,7 @@ public:
     value(const Point<dim> &p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return -alpha * p[1] * (2.0 - p[1]) * (1.0 - p[2]) * (2.0 - p[2]);
+        return 1.;
       else
         return 0.0;
     }

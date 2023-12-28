@@ -118,7 +118,7 @@ public:
 		virtual double
 		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const
 		{
-			return 0.1;
+			return 0.01;
 		}
 	};
 
@@ -138,7 +138,7 @@ public:
     virtual void
     vector_value(const Point<dim> &p, Vector<double> &values) const override
     {
-      values[0]=0.2;
+      values[0]=2.;
     	values[1]=0.;
     }
 
@@ -146,9 +146,9 @@ public:
     value(const Point<dim> &p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 0.2;
+        return 2.;
       else
-        return 0.0;
+        return 0;
     }
 
   protected:
@@ -197,8 +197,8 @@ public:
     vmult(TrilinosWrappers::MPI::BlockVector       &dst,
           const TrilinosWrappers::MPI::BlockVector &src) const
     {
-      SolverControl                           solver_control_velocity(1000,
-                                            1e-2 * src.block(0).l2_norm());
+      SolverControl                           solver_control_velocity(10000,
+                                            1e-2 /** src.block(0).l2_norm()*/);
       SolverCG<TrilinosWrappers::MPI::Vector> solver_cg_velocity(
         solver_control_velocity);
       solver_cg_velocity.solve(*velocity_stiffness,
@@ -206,8 +206,8 @@ public:
                                src.block(0),
                                preconditioner_velocity);
 
-      SolverControl                           solver_control_pressure(1000,
-                                            1e-2 * src.block(1).l2_norm());
+      SolverControl                           solver_control_pressure(10000,
+                                            1e-2 /** src.block(1).l2_norm()*/);
       SolverCG<TrilinosWrappers::MPI::Vector> solver_cg_pressure(
         solver_control_pressure);
       solver_cg_pressure.solve(*pressure_mass,
@@ -254,8 +254,8 @@ public:
     vmult(TrilinosWrappers::MPI::BlockVector       &dst,
           const TrilinosWrappers::MPI::BlockVector &src) const
     {
-      SolverControl                           solver_control_velocity(1000,
-                                            1e-2 * src.block(0).l2_norm());
+      SolverControl                           solver_control_velocity(10000,
+                                            1e-2 /** src.block(0).l2_norm()*/);
       SolverCG<TrilinosWrappers::MPI::Vector> solver_cg_velocity(
         solver_control_velocity);
       solver_cg_velocity.solve(*velocity_stiffness,
@@ -267,8 +267,8 @@ public:
       B->vmult(tmp, dst.block(0));
       tmp.sadd(-1.0, src.block(1));
 
-      SolverControl                           solver_control_pressure(1000,
-                                            1e-2 * src.block(1).l2_norm());
+      SolverControl                           solver_control_pressure(10000,
+                                            1e-2/* * src.block(1).l2_norm()*/);
       SolverCG<TrilinosWrappers::MPI::Vector> solver_cg_pressure(
         solver_control_pressure);
       solver_cg_pressure.solve(*pressure_mass,
@@ -397,8 +397,8 @@ protected:
   // Quadrature formula.
   std::unique_ptr<Quadrature<dim>> quadrature;
 
-  // Quadrature formula for face integrals.
-  std::unique_ptr<Quadrature<dim - 1>> quadrature_face;
+  // Quadrature formula used on boundary lines.
+  std::unique_ptr<Quadrature<dim - 1>> quadrature_boundary;
 
   // DoF handler.
   DoFHandler<dim> dof_handler;

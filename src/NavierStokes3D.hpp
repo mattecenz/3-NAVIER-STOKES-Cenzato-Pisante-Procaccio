@@ -120,7 +120,7 @@ public:
 		virtual double
 		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const
 		{
-			return 0.1;
+			return 0.;
 		}
 	};
 

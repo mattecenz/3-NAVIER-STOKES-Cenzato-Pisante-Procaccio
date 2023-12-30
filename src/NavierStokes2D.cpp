@@ -327,7 +327,7 @@ NavierStokes::assemble()
     boundary_functions.clear();
     Functions::ZeroFunction<dim> zero_function(dim + 1);
   	for(unsigned int i=0;i<7;++i)
-			if(i!=3)
+			if(i!=3 && i!=1)
     		boundary_functions[i] = &zero_function;
     VectorTools::interpolate_boundary_values(dof_handler,
                                              boundary_functions,

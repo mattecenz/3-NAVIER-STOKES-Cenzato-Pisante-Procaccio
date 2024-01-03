@@ -352,10 +352,13 @@ NavierStokes::solve_time_step()
   // preconditioner.initialize(system_matrix.block(0, 0),
   //                           pressure_mass.block(1, 1));
 
-  PreconditionBlockTriangular preconditioner;
+  /*PreconditionBlockTriangular preconditioner;
   preconditioner.initialize(system_matrix.block(0, 0),
                             pressure_mass.block(1, 1),
-                            system_matrix.block(1, 0));
+                            system_matrix.block(1, 0));*/
+
+  PreconditionSIMPLE preconditioner;
+  preconditioner.initialize(system_matrix.block(0,0), system_matrix.block(1,0));
 
   pcout << "Solving the linear system" << std::endl;
   solver.solve(system_matrix, solution_owned, system_rhs, preconditioner);

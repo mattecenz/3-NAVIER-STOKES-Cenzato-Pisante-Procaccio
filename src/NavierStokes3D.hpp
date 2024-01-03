@@ -311,6 +311,7 @@ public:
           B = &B_;
           F = &F_;
 
+          D->operator*= (0);
           for(size_t i = 0; i < F->row_length(0); i++){
             D->set(i,i,F->diag_element(i));
           }

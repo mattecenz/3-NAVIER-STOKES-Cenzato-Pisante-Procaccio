@@ -170,8 +170,8 @@ public:
     // Application of the preconditioner: we just copy the input vector (src)
     // into the output vector (dst).
     void
-    vmult(TrilinosWrappers::MPI::BlockVector       &dst,
-          const TrilinosWrappers::MPI::BlockVector &src) const
+    vmult(TrilinosWrappers::MPI::Vector       &dst,
+          const TrilinosWrappers::MPI::Vector &src) const
     {
       dst = src;
     }

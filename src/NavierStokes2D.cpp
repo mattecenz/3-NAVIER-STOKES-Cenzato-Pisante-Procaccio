@@ -382,7 +382,6 @@ NavierStokes::output(const unsigned int &time_step) const
     DataComponentInterpretation::component_is_scalar);
   std::vector<std::string> names = {"velocity",
                                     "velocity",
-                                    "velocity",
                                     "pressure"};
 
   data_out.add_data_vector(dof_handler,

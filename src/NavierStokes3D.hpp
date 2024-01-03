@@ -311,7 +311,7 @@ public:
           B = &B_;
           F = &F_;
 
-          for(size_t i = 0; i < n_u; i++){
+          for(size_t i = 0; i < F->row_length(0); i++){
             D->set(i,i,F->diag_element(i));
           }
 
@@ -485,10 +485,7 @@ protected:
   std::unique_ptr<Quadrature<dim - 1>> quadrature_face;
 
   // DoF handler.
-  static DoFHandler<dim> dof_handler;
-
-  // n_u
-  static unsigned int n_u;
+  DoFHandler<dim> dof_handler;
 
   // DoFs owned by current process.
   IndexSet locally_owned_dofs;

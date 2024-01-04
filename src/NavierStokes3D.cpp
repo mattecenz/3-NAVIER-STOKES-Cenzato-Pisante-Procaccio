@@ -324,10 +324,9 @@ NavierStokes::assemble()
                                                {true, true, true, false}));
 
     boundary_functions.clear();
-    Functions::ZeroFunction<dim> zero_function(dim + 1);
     for(unsigned int i=1;i<11;++i)
 			if(i!=3 && i!=5)
-				boundary_functions[i] = &zero_function;
+				boundary_functions[i] = &function_g;
     VectorTools::interpolate_boundary_values(dof_handler,
                                              boundary_functions,
                                              boundary_values,
@@ -337,14 +336,13 @@ NavierStokes::assemble()
     MatrixTools::apply_boundary_values(
       boundary_values, system_matrix, solution, system_rhs, false);
   }
-	//pcout<<system_matrix<<std::endl;
 }
 void
 NavierStokes::solve_time_step()
 {
   pcout << "===============================================" << std::endl;
 
-  SolverControl solver_control(2000, 1e-6 * system_rhs.l2_norm());
+  SolverControl solver_control(100000, 1e-6 * system_rhs.l2_norm());
 
   SolverGMRES<TrilinosWrappers::MPI::BlockVector> solver(solver_control);
 
@@ -352,13 +350,15 @@ NavierStokes::solve_time_step()
   // preconditioner.initialize(system_matrix.block(0, 0),
   //                           pressure_mass.block(1, 1));
 
-  /*PreconditionBlockTriangular preconditioner;
-  preconditioner.initialize(system_matrix.block(0, 0),
-                            pressure_mass.block(1, 1),
-                            system_matrix.block(1, 0));*/
+  //PreconditionBlockTriangular preconditioner;
+  //preconditioner.initialize(system_matrix.block(0, 0),
+  //                          pressure_mass.block(1, 1),
+  //                          system_matrix.block(1, 0));
 
-  PreconditionSIMPLE preconditioner;
-  preconditioner.initialize(system_matrix.block(0,0), system_matrix.block(1,0));
+  //PreconditionSIMPLE preconditioner;
+  //preconditioner.initialize(system_matrix.block(0,0), system_matrix.block(1,0));
+
+	PreconditionIdentity preconditioner;
 
   pcout << "Solving the linear system" << std::endl;
   solver.solve(system_matrix, solution_owned, system_rhs, preconditioner);
@@ -397,7 +397,7 @@ NavierStokes::output(const unsigned int &time_step) const
 
   data_out.build_patches();
 
-  const std::string output_file_name = "output-stokes";
+  const std::string output_file_name = "output-stokes-3D";
   data_out.write_vtu_with_pvtu_record("./",
                                       output_file_name,
                                       time_step,

@@ -325,10 +325,11 @@ NavierStokes::assemble()
                                                {true, true, false}));
 
     boundary_functions.clear();
-    Functions::ZeroFunction<dim> zero_function(dim + 1);
-  	for(unsigned int i=2;i<7;++i)
-			if(i!=3)
-    		boundary_functions[i] = &zero_function;
+  	for(unsigned int i=1;i<7;++i){
+			if(i!=1 && i!=3){
+    		boundary_functions[i] = &function_g;
+			}
+		}
     VectorTools::interpolate_boundary_values(dof_handler,
                                              boundary_functions,
                                              boundary_values,
@@ -345,7 +346,7 @@ NavierStokes::solve_time_step()
 {
   pcout << "===============================================" << std::endl;
 
-  SolverControl solver_control(2000, 1e-2 /** system_rhs.l2_norm()*/);
+  SolverControl solver_control(100000, 1e-4 * system_rhs.l2_norm());
 
   SolverGMRES<TrilinosWrappers::MPI::BlockVector> solver(solver_control);
 
@@ -396,7 +397,7 @@ NavierStokes::output(const unsigned int &time_step) const
 
   data_out.build_patches();
 
-  const std::string output_file_name = "output-stokes";
+  const std::string output_file_name = "output-stokes-2D";
   data_out.write_vtu_with_pvtu_record("./",
                                       output_file_name,
                                       time_step,

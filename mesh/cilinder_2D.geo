@@ -1,4 +1,4 @@
-lc = 0.04;
+lc = 0.01;
 
 Point(1) = {0   ,0   ,0,lc};
 Point(2) = {0   ,0.41,0,lc};
@@ -33,7 +33,7 @@ Physical Surface(7)={1};
 
 //Mesh.SaveAll=1;
 Mesh 2;
-Save "cilinder_2D_coarse.msh";
+Save "cilinder_2D_fine.msh";
 
 Color Red{ Physical Curve{1}; }
 Color Purple{ Physical Curve{2}; }

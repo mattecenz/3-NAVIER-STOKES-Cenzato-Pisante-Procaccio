@@ -45,6 +45,10 @@ public:
   class ForcingTerm : public Function<dim>
   {
   public:
+
+		ForcingTerm()
+		{}
+
     virtual void
     vector_value(const Point<dim> & /*p*/,
                  Vector<double> &values) const override
@@ -74,12 +78,18 @@ public:
 	{
 	public:
 		// Constructor.
-		FunctionG()
+		FunctionG() : Function<dim>(dim+1)
 		{}
 
-		// Evaluation.
+		virtual void
+		vector_value(const Point<dim> & /*p*/, Vector<double> &values) const override{
+			values[0]=0.;
+			values[1]=0.;
+			values[2]=0.;
+		}
+
 		virtual double
-		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const override
+		value(const Point<dim> &/*p*/, const unsigned int /*component*/) const override
 		{
 			return 0.;
 		}
@@ -93,15 +103,10 @@ public:
 		FunctionH()
 		{}
 
-		// Evaluation.
 		virtual double
-		value(const Point<dim> &/*p*/, const unsigned int component =0) const override
+		value(const Point<dim> &/*p*/, const unsigned int /*component*/) const override
 		{
-			if(component == 0)
-				return 0.;
-			else if (component == 1)
-				return 0.;
-			
+			return 0.;
 		}
 		virtual void
 		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override
@@ -115,10 +120,23 @@ public:
 	class FunctionU0 : public Function<dim>
 	{
 	public:
+		
+		FunctionU0()
+		{}
+
 		virtual double
-		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const
+		value(const Point<dim> &/*p*/, const unsigned int component) const
 		{
-			return 0.01;
+			if(component == 0)
+				return 0.5;
+			else
+				return 0.;
+		}
+		virtual void
+		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override
+		{
+			values[0]=0.5;
+			values[1]=0.;
 		}
 	};
 
@@ -138,7 +156,7 @@ public:
     virtual void
     vector_value(const Point<dim> &p, Vector<double> &values) const override
     {
-      values[0]=2.;
+      values[0]=1.;
     	values[1]=0.;
     }
 
@@ -146,7 +164,7 @@ public:
     value(const Point<dim> &p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 2.;
+        return 1.;
       else
         return 0;
     }
@@ -351,7 +369,7 @@ protected:
   // Problem definition. ///////////////////////////////////////////////////////
 
   // Kinematic viscosity [m2/s].
-  const double nu = 1.e-3;
+  const double nu = 1;
 
   // Outlet pressure [Pa].
   const double p_out = 10;

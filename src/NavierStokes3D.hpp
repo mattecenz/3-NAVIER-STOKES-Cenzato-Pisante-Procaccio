@@ -45,7 +45,11 @@ public:
   class ForcingTerm : public Function<dim>
   {
   public:
-    virtual void
+    
+		ForcingTerm()
+		{}
+		
+		virtual void
     vector_value(const Point<dim> & /*p*/,
                  Vector<double> &values) const override
     {
@@ -74,15 +78,27 @@ public:
 	{
 	public:
 		// Constructor.
-		FunctionG()
+		FunctionG() : Function<dim>(dim+1)
 		{}
 
 		// Evaluation.
 		virtual double
-		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const override
+		value(const Point<dim> &/*p*/, const unsigned int component =0) const override
 		{
-			return 1.;
+			if(component==3)
+				return 0.;
+			else
+				return 0.;
 		}
+
+		virtual void
+		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override{
+			values[0]=0.;
+			values[1]=0.;
+			values[2]=0.;
+			values[3]=0.;
+		}
+
 	};
 	
 	// Neumann boundary conditions.
@@ -97,19 +113,14 @@ public:
 		virtual double
 		value(const Point<dim> &/*p*/, const unsigned int component =0) const override
 		{
-			if(component == 0)
-				return 0.;
-			else if (component == 1)
-				return 0.;
-			else // if (component == 2)
-				return 0.;
+			return 0.;
 		}
 		virtual void
 		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override
 		{
-			values[0]=0.0;
-			values[1]=0.0;
-			values[2]=0.0;
+			values[0]=0.;
+			values[1]=0.;
+			values[2]=0.;
 		}
 	};
 
@@ -117,10 +128,24 @@ public:
 	class FunctionU0 : public Function<dim>
 	{
 	public:
+
+		FunctionU0()
+		{}
+
 		virtual double
-		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const
+		value(const Point<dim> &/*p*/, const unsigned int component =0) const
 		{
-			return 0.;
+			if(component == 0)
+				return 0.05;
+			else
+				return 0.;
+		}
+		virtual void
+		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override
+		{
+			values[0]=0.05;
+			values[1]=0.;
+			values[2]=0.;
 		}
 	};
 
@@ -170,8 +195,8 @@ public:
     // Application of the preconditioner: we just copy the input vector (src)
     // into the output vector (dst).
     void
-    vmult(TrilinosWrappers::MPI::Vector       &dst,
-          const TrilinosWrappers::MPI::Vector &src) const
+    vmult(TrilinosWrappers::MPI::BlockVector       &dst,
+          const TrilinosWrappers::MPI::BlockVector &src) const
     {
       dst = src;
     }
@@ -301,12 +326,13 @@ public:
     mutable TrilinosWrappers::MPI::Vector tmp;
   };
 
+	/*
   class PreconditionSIMPLE
     {
       public:
         void
-        initialize(const TrilinosWrappers::SparseMatrix &F_,
-                  TrilinosWrappers::SparseMatrix &B_) 
+        initialize(const TrilinosWrappers::BlockSparseMatrix &F_,
+                  TrilinosWrappers::BlockSparseMatrix &B_) 
         {
           B = &B_;
           F = &F_;
@@ -381,6 +407,7 @@ public:
           mutable TrilinosWrappers::MPI::Vector tmp;
           const double alpha = 0.5;
     };
+		*/
 
   // Constructor.
   NavierStokes(const std::string  &mesh_file_name_,

@@ -111,7 +111,7 @@ public:
 
 		// Evaluation.
 		virtual double
-		value(const Point<dim> &/*p*/, const unsigned int component =0) const override
+		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const override
 		{
 			return 0.;
 		}
@@ -163,7 +163,7 @@ public:
     {}
 
     virtual void
-    vector_value(const Point<dim> &p, Vector<double> &values) const override
+    vector_value(const Point<dim> & /*p*/, Vector<double> &values) const override
     {
       values[0] = 1.; 
 
@@ -172,7 +172,7 @@ public:
     }
 
     virtual double
-    value(const Point<dim> &p, const unsigned int component = 0) const override
+    value(const Point<dim> & /*p*/, const unsigned int component = 0) const override
     {
       if (component == 0)
         return 1.;
@@ -195,8 +195,8 @@ public:
     // Application of the preconditioner: we just copy the input vector (src)
     // into the output vector (dst).
     void
-    vmult(TrilinosWrappers::MPI::BlockVector       &dst,
-          const TrilinosWrappers::MPI::BlockVector &src) const
+    vmult(TrilinosWrappers::MPI::Vector       &dst,
+          const TrilinosWrappers::MPI::Vector &src) const
     {
       dst = src;
     }
@@ -336,14 +336,19 @@ public:
         {
           B = &B_;
           F = &F_;
-          D->operator*=(0);
-          for(size_t i = 0; i < F->row_length(0); i++){
-            D->set(i,i,F->diag_element(i));
+          TrilinosWrappers::SparseMatrix D0(F->m(),F->n(),1);
+          D0.operator*=(0);
+          for(size_t i = 0; i < F->m(); i++){
+            D0.set(i,i,F->diag_element(i));
           }
-          S = B;
-          S->mmult(*S,*D);
+          D = &D0;
+          std::cout<< S->n() <<"\n";
+          std::cout<< D->m() <<"\n";
+          B->mmult(*S, *D);
+          std::cout<<"2\n";
           B->transpose();
-          S->mmult(*S, *B);      
+          S->mmult(*S, *B); 
+          std::cout<<"3\n";     
           S->operator*= (-1);
           preconditionerF.initialize(F_);
           preconditionerS.initialize(*S);
@@ -387,8 +392,8 @@ public:
         protected:
           TrilinosWrappers::SparseMatrix *B;
           const TrilinosWrappers::SparseMatrix *F;
-          TrilinosWrappers::SparseMatrix *D;
           TrilinosWrappers::SparseMatrix *S;
+          TrilinosWrappers::SparseMatrix *D;
           
           TrilinosWrappers::PreconditionILU preconditionerF;
           TrilinosWrappers::PreconditionILU preconditionerS;

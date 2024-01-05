@@ -326,32 +326,28 @@ public:
     mutable TrilinosWrappers::MPI::Vector tmp;
   };
 
-	/*
-  class PreconditionSIMPLE
+	
+    class PreconditionSIMPLE
     {
       public:
         void
-        initialize(const TrilinosWrappers::BlockSparseMatrix &F_,
-                  TrilinosWrappers::BlockSparseMatrix &B_) 
+        initialize(const TrilinosWrappers::SparseMatrix &F_,
+                  TrilinosWrappers::SparseMatrix &B_) 
         {
           B = &B_;
           F = &F_;
 
-          D->operator*= (0);
           for(size_t i = 0; i < F->row_length(0); i++){
             D->set(i,i,F->diag_element(i));
           }
-
           S = B;
           S->mmult(*S,*D);
           B->transpose();
           S->mmult(*S, *B);      
           S->operator*= (-1);
-
           preconditionerF.initialize(F_);
           preconditionerS.initialize(*S);
         }
-
         void 
         vmult(TrilinosWrappers::MPI::BlockVector   &dst,
           const TrilinosWrappers::MPI::BlockVector &src) const
@@ -364,11 +360,9 @@ public:
                                   dst.block(0),
                                   src.block(0),
                                   preconditionerF);
-
           tmp.reinit(src.block(1));
           B->vmult(tmp, dst.block(0));
           tmp.sadd(-1.0, src.block(1));
-
           SolverControl                           solver_control_pressure(1000,
                                                 1e-2 * src.block(1).l2_norm());
           SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres_pressure(
@@ -377,23 +371,19 @@ public:
                                dst.block(1),
                                tmp,
                                preconditionerS);
-
           tmp.reinit(dst.block(0));
           D->vmult(tmp, dst.block(0));
           dst.block(0) = tmp;
           dst.block(1).sadd(1/alpha,dst.block(1));
-
           B->transpose();
           B->vmult(tmp, dst.block(1));
           tmp.sadd(-1,dst.block(0));
           dst.block(0) = tmp;
-
           solver_gmres_velocity.solve(*D,
                                dst.block(0),
                                tmp,
                                I);
         }
-
         protected:
           TrilinosWrappers::SparseMatrix *B;
           const TrilinosWrappers::SparseMatrix *F;
@@ -403,11 +393,9 @@ public:
           TrilinosWrappers::PreconditionILU preconditionerF;
           TrilinosWrappers::PreconditionILU preconditionerS;
           PreconditionIdentity I;
-
           mutable TrilinosWrappers::MPI::Vector tmp;
           const double alpha = 0.5;
     };
-		*/
 
   // Constructor.
   NavierStokes(const std::string  &mesh_file_name_,

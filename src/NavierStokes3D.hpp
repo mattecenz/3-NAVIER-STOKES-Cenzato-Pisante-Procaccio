@@ -45,11 +45,11 @@ public:
   class ForcingTerm : public Function<dim>
   {
   public:
-    
-		ForcingTerm()
-		{}
-		
-		virtual void
+    ForcingTerm()
+    {
+    }
+
+    virtual void
     vector_value(const Point<dim> & /*p*/,
                  Vector<double> &values) const override
     {
@@ -73,81 +73,83 @@ public:
     const double g = 0.0;
   };
 
-	// Dirichlet boundary conditions.
-	class FunctionG : public Function<dim>
-	{
-	public:
-		// Constructor.
-		FunctionG() : Function<dim>(dim+1)
-		{}
+  // Dirichlet boundary conditions.
+  class FunctionG : public Function<dim>
+  {
+  public:
+    // Constructor.
+    FunctionG() : Function<dim>(dim + 1)
+    {
+    }
 
-		// Evaluation.
-		virtual double
-		value(const Point<dim> &/*p*/, const unsigned int component =0) const override
-		{
-			if(component==3)
-				return 0.;
-			else
-				return 0.;
-		}
+    // Evaluation.
+    virtual double
+    value(const Point<dim> & /*p*/, const unsigned int component = 0) const override
+    {
+      if (component == 3)
+        return 0.;
+      else
+        return 0.;
+    }
 
-		virtual void
-		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override{
-			values[0]=0.;
-			values[1]=0.;
-			values[2]=0.;
-			values[3]=0.;
-		}
+    virtual void
+    vector_value(const Point<dim> & /*p*/, Vector<double> &values) const override
+    {
+      values[0] = 0.;
+      values[1] = 0.;
+      values[2] = 0.;
+      values[3] = 0.;
+    }
+  };
 
-	};
-	
-	// Neumann boundary conditions.
-	class FunctionH : public Function<dim>
-	{
-	public:
-		// Constructor.
-		FunctionH()
-		{}
+  // Neumann boundary conditions.
+  class FunctionH : public Function<dim>
+  {
+  public:
+    // Constructor.
+    FunctionH()
+    {
+    }
 
-		// Evaluation.
-		virtual double
-		value(const Point<dim> &/*p*/, const unsigned int /*component*/ =0) const override
-		{
-			return 0.;
-		}
-		virtual void
-		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override
-		{
-			values[0]=0.;
-			values[1]=0.;
-			values[2]=0.;
-		}
-	};
+    // Evaluation.
+    virtual double
+    value(const Point<dim> & /*p*/, const unsigned int /*component*/ = 0) const override
+    {
+      return 0.;
+    }
+    virtual void
+    vector_value(const Point<dim> & /*p*/, Vector<double> &values) const override
+    {
+      values[0] = 0.;
+      values[1] = 0.;
+      values[2] = 0.;
+    }
+  };
 
-	// Function for the initial condition.
-	class FunctionU0 : public Function<dim>
-	{
-	public:
+  // Function for the initial condition.
+  class FunctionU0 : public Function<dim>
+  {
+  public:
+    FunctionU0()
+    {
+    }
 
-		FunctionU0()
-		{}
-
-		virtual double
-		value(const Point<dim> &/*p*/, const unsigned int component =0) const
-		{
-			if(component == 0)
-				return 0.05;
-			else
-				return 0.;
-		}
-		virtual void
-		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override
-		{
-			values[0]=0.05;
-			values[1]=0.;
-			values[2]=0.;
-		}
-	};
+    virtual double
+    value(const Point<dim> & /*p*/, const unsigned int component = 0) const
+    {
+      if (component == 0)
+        return 0.05;
+      else
+        return 0.;
+    }
+    virtual void
+    vector_value(const Point<dim> & /*p*/, Vector<double> &values) const override
+    {
+      values[0] = 0.05;
+      values[1] = 0.;
+      values[2] = 0.;
+    }
+  };
 
   // Function for inlet velocity. This actually returns an object with four
   // components (one for each velocity component, and one for the pressure), but
@@ -159,13 +161,14 @@ public:
   {
   public:
     InletVelocity()
-      : Function<dim>(dim + 1)
-    {}
+        : Function<dim>(dim + 1)
+    {
+    }
 
     virtual void
     vector_value(const Point<dim> & /*p*/, Vector<double> &values) const override
     {
-      values[0] = 1.; 
+      values[0] = 1.;
 
       for (unsigned int i = 1; i < dim + 1; ++i)
         values[i] = 0.0;
@@ -195,7 +198,7 @@ public:
     // Application of the preconditioner: we just copy the input vector (src)
     // into the output vector (dst).
     void
-    vmult(TrilinosWrappers::MPI::Vector       &dst,
+    vmult(TrilinosWrappers::MPI::Vector &dst,
           const TrilinosWrappers::MPI::Vector &src) const
     {
       dst = src;
@@ -215,7 +218,7 @@ public:
                const TrilinosWrappers::SparseMatrix &pressure_mass_)
     {
       velocity_stiffness = &velocity_stiffness_;
-      pressure_mass      = &pressure_mass_;
+      pressure_mass = &pressure_mass_;
 
       preconditioner_velocity.initialize(velocity_stiffness_);
       preconditioner_pressure.initialize(pressure_mass_);
@@ -223,22 +226,22 @@ public:
 
     // Application of the preconditioner.
     void
-    vmult(TrilinosWrappers::MPI::BlockVector       &dst,
+    vmult(TrilinosWrappers::MPI::BlockVector &dst,
           const TrilinosWrappers::MPI::BlockVector &src) const
     {
-      SolverControl                           solver_control_velocity(1000,
+      SolverControl solver_control_velocity(1000,
                                             1e-2 * src.block(0).l2_norm());
       SolverCG<TrilinosWrappers::MPI::Vector> solver_cg_velocity(
-        solver_control_velocity);
+          solver_control_velocity);
       solver_cg_velocity.solve(*velocity_stiffness,
                                dst.block(0),
                                src.block(0),
                                preconditioner_velocity);
 
-      SolverControl                           solver_control_pressure(1000,
+      SolverControl solver_control_pressure(1000,
                                             1e-2 * src.block(1).l2_norm());
       SolverCG<TrilinosWrappers::MPI::Vector> solver_cg_pressure(
-        solver_control_pressure);
+          solver_control_pressure);
       solver_cg_pressure.solve(*pressure_mass,
                                dst.block(1),
                                src.block(1),
@@ -271,8 +274,8 @@ public:
                const TrilinosWrappers::SparseMatrix &B_)
     {
       velocity_stiffness = &velocity_stiffness_;
-      pressure_mass      = &pressure_mass_;
-      B                  = &B_;
+      pressure_mass = &pressure_mass_;
+      B = &B_;
 
       preconditioner_velocity.initialize(velocity_stiffness_);
       preconditioner_pressure.initialize(pressure_mass_);
@@ -280,13 +283,13 @@ public:
 
     // Application of the preconditioner.
     void
-    vmult(TrilinosWrappers::MPI::BlockVector       &dst,
+    vmult(TrilinosWrappers::MPI::BlockVector &dst,
           const TrilinosWrappers::MPI::BlockVector &src) const
     {
-      SolverControl                           solver_control_velocity(1000,
+      SolverControl solver_control_velocity(1000,
                                             1e-2 * src.block(0).l2_norm());
       SolverCG<TrilinosWrappers::MPI::Vector> solver_cg_velocity(
-        solver_control_velocity);
+          solver_control_velocity);
       solver_cg_velocity.solve(*velocity_stiffness,
                                dst.block(0),
                                src.block(0),
@@ -296,10 +299,10 @@ public:
       B->vmult(tmp, dst.block(0));
       tmp.sadd(-1.0, src.block(1));
 
-      SolverControl                           solver_control_pressure(1000,
+      SolverControl solver_control_pressure(1000,
                                             1e-2 * src.block(1).l2_norm());
       SolverCG<TrilinosWrappers::MPI::Vector> solver_cg_pressure(
-        solver_control_pressure);
+          solver_control_pressure);
       solver_cg_pressure.solve(*pressure_mass,
                                dst.block(1),
                                tmp,
@@ -326,136 +329,134 @@ public:
     mutable TrilinosWrappers::MPI::Vector tmp;
   };
 
-	
-    class PreconditionSIMPLE
+  class PreconditionSIMPLE
+  {
+  public:
+    void
+    initialize(const TrilinosWrappers::SparseMatrix &F_,
+               TrilinosWrappers::SparseMatrix &B_)
     {
-      public:
-        void
-        initialize(const TrilinosWrappers::SparseMatrix &F_,
-                  TrilinosWrappers::SparseMatrix &B_) 
+      B = &B_;
+      F = &F_;
+
+      FullMatrix<double> D(F->m(), F->n());
+      D.operator=(0);
+      for (size_t i = 0; i < F->m(); i++)
+      {
+        D.set(i, i, 1 / F->diag_element(i));
+      }
+
+      FullMatrix<double> M(B->m(), D.n());
+      FullMatrix<double> M2(B->m(), B->n());
+      FullMatrix<double> B_full(B->m(), B->n());
+      FullMatrix<double> B_fullt(B->n(), B->m());
+      B_full.copy_from(*B);
+
+      std::cout << "prima\n";
+      B_full.mmult(M, D);
+      B_fullt.copy_transposed(B_full);
+      M.mmult(M2, B_fullt);
+
+      SparsityPattern sp;
+      sp.copy_from(M2);
+      S->reinit(sp);
+      // Copy values from FullMatrix to SparseMatrix
+      for (unsigned int i = 0; i < M2.m(); ++i)
+      {
+        for (unsigned int j = 0; j < M2.n(); ++j)
         {
-          B = &B_;
-          F = &F_;
-
-          FullMatrix<double> D(F->m(),F->n());
-          D.operator=(0);
-          for(size_t i = 0; i < F->m(); i++){
-            D.set(i,i,1/F->diag_element(i)); 
-          }
-
-          FullMatrix<double> M(B->m(),D.n());
-          FullMatrix<double> M2(B->m(),B->n());
-          FullMatrix<double> B_full(B->m(),B->n());
-          B_full.copy_from(*B);
-
-          std::cout<<"prima\n";
-          B_full.mmult(M,D);
-          B_full.transpose();
-          M.mmult(M2,B_full);
-          B_full.transpose();
-
-          SparsityPattern sp;
-          sp.copy_from(M2);
-          S->reinit(sp);
-          // Copy values from FullMatrix to SparseMatrix
-          for (unsigned int i = 0; i < M2.m(); ++i){
-              for (unsigned int j = 0; j < M2.n(); ++j){
-                const double value = M2(i,j);
-                  if (value != 0.0)
-                      S->set(i, j, value);
-              }
-          }
-          std::cout<<"dopo\n";
-
-          preconditionerF.initialize(F_);
-          preconditionerS.initialize(*S);
-          std::cout<<"dopo\n";
+          if (M2(i, j) != 0.0)
+            S->set(i, j, M2(i, j));
         }
-        void 
-        vmult(TrilinosWrappers::MPI::BlockVector   &dst,
+      }
+      
+      std::cout << "dopo\n";
+      S->compress(VectorOperation::add);
+      std::cout << "dopo\n";
+      preconditionerF.initialize(*F); //PROBLEMA
+      preconditionerS.initialize(*S);
+      std::cout << "dopo\n";
+    }
+    void
+    vmult(TrilinosWrappers::MPI::BlockVector &dst,
           const TrilinosWrappers::MPI::BlockVector &src) const
-        {
-          SparsityPattern sp(F->m(),F->n(),1);
-          sp.compress();
-          TrilinosWrappers::SparseMatrix D;
-          D.reinit(sp);
-          for(size_t i = 0; i < F->m(); i++){
-            D.set(i,i,F->diag_element(i)); 
-          }
+    {
+      SparsityPattern sp(F->m(), F->n(), 1);
+      sp.compress();
+      TrilinosWrappers::SparseMatrix D;
+      D.reinit(sp);
+      for (size_t i = 0; i < F->m(); i++)
+      {
+        D.set(i, i, F->diag_element(i));
+      }
 
-          SolverControl                           solver_control_velocity(1000,
-                                                1e-2 * src.block(0).l2_norm());
-          SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres_velocity(
-            solver_control_velocity);
+      SolverControl solver_control_velocity(1000,
+                                            1e-2 * src.block(0).l2_norm());
+      SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres_velocity(
+          solver_control_velocity);
 
-          solver_gmres_velocity.solve(*F,
+      solver_gmres_velocity.solve(*F,
                                   dst.block(0),
                                   src.block(0),
                                   preconditionerF);
-          std::cout<<"1\n";
+      std::cout << "1\n";
 
-          B->vmult(dst.block(1), dst.block(0));
-          dst.block(1).sadd(-1.0, src.block(1)); 
-          std::cout<<"2\n";
- 
-          tmp.reinit(src.block(1));
-          tmp2.reinit(src.block(0));
-          SolverControl                           solver_control2(1000,
-                                                1e-2 * dst.block(1).l2_norm());
-          SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres2(
-            solver_control2);
-          solver_gmres2.solve(*S,
-                               tmp,
-                               dst.block(1),
-                               preconditionerS);                 
-          std::cout<<"3\n";
+      B->vmult(dst.block(1), dst.block(0));
+      dst.block(1).sadd(-1.0, src.block(1));
+      std::cout << "2\n";
 
-          D.vmult(tmp, dst.block(0));
-          dst.block(1).sadd(1/alpha,dst.block(1));
-          std::cout<<"4\n";
+      tmp.reinit(src.block(1));
+      tmp2.reinit(src.block(0));
+      SolverControl solver_control2(1000,
+                                    1e-2 * dst.block(1).l2_norm());
+      SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres2(
+          solver_control2);
+      solver_gmres2.solve(*S,
+                          tmp,
+                          dst.block(1),
+                          preconditionerS);
+      std::cout << "3\n";
 
-          B->transpose();
-          B->vmult(tmp2, dst.block(1));
-          tmp2.sadd(-1, tmp);
-          B->transpose();
-          std::cout<<"5\n";
+      D.vmult(tmp, dst.block(0));
+      dst.block(1).sadd(1 / alpha, dst.block(1));
+      std::cout << "4\n";
 
-          solver_gmres_velocity.solve(D,
-                               dst.block(0),
-                               tmp2,
-                               I);
-          std::cout<<"fine\n";
-        }
-        protected:
-          TrilinosWrappers::SparseMatrix *B;
-          TrilinosWrappers::SparseMatrix *Bt;
-          const TrilinosWrappers::SparseMatrix *F;
-          TrilinosWrappers::SparseMatrix *S;
-          
-          TrilinosWrappers::PreconditionILU preconditionerF;
-          TrilinosWrappers::PreconditionILU preconditionerS;
-          PreconditionIdentity I;
-          mutable TrilinosWrappers::MPI::Vector tmp;
-          mutable TrilinosWrappers::MPI::Vector tmp2;
-          const double alpha = 0.5;
-    };
+      B->transpose();
+      B->vmult(tmp2, dst.block(1));
+      tmp2.sadd(-1, tmp);
+      B->transpose();
+      std::cout << "5\n";
+
+      solver_gmres_velocity.solve(D,
+                                  dst.block(0),
+                                  tmp2,
+                                  I);
+      std::cout << "fine\n";
+    }
+
+  protected:
+    TrilinosWrappers::SparseMatrix *B;
+    TrilinosWrappers::SparseMatrix *Bt;
+    const TrilinosWrappers::SparseMatrix *F;
+    TrilinosWrappers::SparseMatrix *S;
+
+    TrilinosWrappers::PreconditionILU preconditionerF;
+    TrilinosWrappers::PreconditionILU preconditionerS;
+    PreconditionIdentity I;
+    mutable TrilinosWrappers::MPI::Vector tmp;
+    mutable TrilinosWrappers::MPI::Vector tmp2;
+    const double alpha = 0.5;
+  };
 
   // Constructor.
-  NavierStokes(const std::string  &mesh_file_name_,
-         const unsigned int &degree_velocity_,
-         const unsigned int &degree_pressure_,
-				 const double       &T_,
-				 const double       &deltat_)
-    : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
-    , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
-    , pcout(std::cout, mpi_rank == 0)
-    , mesh_file_name(mesh_file_name_)
-    , degree_velocity(degree_velocity_)
-    , degree_pressure(degree_pressure_)
-		, T(T_)
-		, deltat(deltat_)
-    , mesh(MPI_COMM_WORLD)
-  {}
+  NavierStokes(const std::string &mesh_file_name_,
+               const unsigned int &degree_velocity_,
+               const unsigned int &degree_pressure_,
+               const double &T_,
+               const double &deltat_)
+      : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)), mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)), pcout(std::cout, mpi_rank == 0), mesh_file_name(mesh_file_name_), degree_velocity(degree_velocity_), degree_pressure(degree_pressure_), T(T_), deltat(deltat_), mesh(MPI_COMM_WORLD)
+  {
+  }
 
   // Setup system.
   void
@@ -466,17 +467,16 @@ public:
   solve();
 
 protected:
-  
-	// Assemble system. We also assemble the pressure mass matrix (needed for the
+  // Assemble system. We also assemble the pressure mass matrix (needed for the
   // preconditioner).
   void
   assemble();
 
-	// Solve the problem for one time step.
-	void 
-	solve_time_step();
-  
-	// Output results.
+  // Solve the problem for one time step.
+  void
+  solve_time_step();
+
+  // Output results.
   void
   output(const unsigned int &time_step) const;
 
@@ -505,8 +505,8 @@ protected:
   // Inlet velocity.
   InletVelocity inlet_velocity;
 
-	// Final time.
-	const double T;
+  // Final time.
+  const double T;
 
   // Discretization. ///////////////////////////////////////////////////////////
 
@@ -519,17 +519,17 @@ protected:
   // Polynomial degree used for pressure.
   const unsigned int degree_pressure;
 
-	// TIme step.
-	const double deltat;
+  // TIme step.
+  const double deltat;
 
-	// g(x).
-	FunctionG function_g;
+  // g(x).
+  FunctionG function_g;
 
-	// h(x).
-	FunctionH function_h;
+  // h(x).
+  FunctionH function_h;
 
-	// Initial condition.
-	FunctionU0 u_0;
+  // Initial condition.
+  FunctionU0 u_0;
 
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;

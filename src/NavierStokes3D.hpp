@@ -337,11 +337,39 @@ public:
           B = &B_;
           F = &F_;
 
+          FullMatrix<double> D(F->m(),F->n());
+          D.operator=(0);
+          for(size_t i = 0; i < F->m(); i++){
+            D.set(i,i,1/F->diag_element(i)); 
+          }
+
+          FullMatrix<double> M(B->m(),D.n());
+          FullMatrix<double> M2(B->m(),B->n());
+          FullMatrix<double> B_full(B->m(),B->n());
+          B_full.copy_from(*B);
+
+          std::cout<<"prima\n";
+          B_full.mmult(M,D);
+          B_full.transpose();
+          M.mmult(M2,B_full);
+          B_full.transpose();
+
+          SparsityPattern sp;
+          sp.copy_from(M2);
+          S->reinit(sp);
+          // Copy values from FullMatrix to SparseMatrix
+          for (unsigned int i = 0; i < M2.m(); ++i){
+              for (unsigned int j = 0; j < M2.n(); ++j){
+                const double value = M2(i,j);
+                  if (value != 0.0)
+                      S->set(i, j, value);
+              }
+          }
+          std::cout<<"dopo\n";
+
           preconditionerF.initialize(F_);
-          preconditionerB.initialize(*B);
-          B->transpose();
-          preconditionerBt.initialize(*B);
-          B->transpose();
+          preconditionerS.initialize(*S);
+          std::cout<<"dopo\n";
         }
         void 
         vmult(TrilinosWrappers::MPI::BlockVector   &dst,
@@ -354,49 +382,47 @@ public:
           for(size_t i = 0; i < F->m(); i++){
             D.set(i,i,F->diag_element(i)); 
           }
+
           SolverControl                           solver_control_velocity(1000,
                                                 1e-2 * src.block(0).l2_norm());
           SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres_velocity(
             solver_control_velocity);
+
           solver_gmres_velocity.solve(*F,
                                   dst.block(0),
                                   src.block(0),
                                   preconditionerF);
+          std::cout<<"1\n";
+
+          B->vmult(dst.block(1), dst.block(0));
+          dst.block(1).sadd(-1.0, src.block(1)); 
           std::cout<<"2\n";
+ 
           tmp.reinit(src.block(1));
-          B->vmult(tmp, dst.block(0));
-          std::cout<<"3\n";
-          tmp.sadd(-1.0, src.block(1));
           tmp2.reinit(src.block(0));
-          SolverControl                           solver_control_pressure(1000,
-                                                1e-2 * src.block(1).l2_norm());
-          SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres_pressure(
-            solver_control_pressure);
-          solver_gmres_pressure.solve(*B,
-                               tmp2,
+          SolverControl                           solver_control2(1000,
+                                                1e-2 * dst.block(1).l2_norm());
+          SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres2(
+            solver_control2);
+          solver_gmres2.solve(*S,
                                tmp,
-                               preconditionerB);
-          std::cout<<"4\n";
-          tmp.reinit(tmp2);
-          D.vmult(tmp, tmp2); 
-          B->transpose();
-          solver_gmres_pressure.solve(*B,
                                dst.block(1),
-                               tmp,
-                               preconditionerBt);   
-          B->transpose();                
-          std::cout<<"4\n";
-          tmp.reinit(dst.block(0));
+                               preconditionerS);                 
+          std::cout<<"3\n";
+
           D.vmult(tmp, dst.block(0));
-          dst.block(0) = tmp;
           dst.block(1).sadd(1/alpha,dst.block(1));
+          std::cout<<"4\n";
+
           B->transpose();
-          B->vmult(tmp, dst.block(1));
-          tmp.sadd(-1,dst.block(0));
-          dst.block(0) = tmp;
+          B->vmult(tmp2, dst.block(1));
+          tmp2.sadd(-1, tmp);
+          B->transpose();
+          std::cout<<"5\n";
+
           solver_gmres_velocity.solve(D,
                                dst.block(0),
-                               tmp,
+                               tmp2,
                                I);
           std::cout<<"fine\n";
         }
@@ -407,8 +433,7 @@ public:
           TrilinosWrappers::SparseMatrix *S;
           
           TrilinosWrappers::PreconditionILU preconditionerF;
-          TrilinosWrappers::PreconditionILU preconditionerB;
-          TrilinosWrappers::PreconditionILU preconditionerBt;
+          TrilinosWrappers::PreconditionILU preconditionerS;
           PreconditionIdentity I;
           mutable TrilinosWrappers::MPI::Vector tmp;
           mutable TrilinosWrappers::MPI::Vector tmp2;

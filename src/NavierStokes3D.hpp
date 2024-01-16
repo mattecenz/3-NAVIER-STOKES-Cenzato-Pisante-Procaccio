@@ -352,6 +352,16 @@ public:
       FullMatrix<double> B_fullt(B->n(), B->m());
       B_full.copy_from(*B);
 
+      for (unsigned int i = 0; i < M2.m(); ++i)
+      {
+        for (unsigned int j = 0; j < M2.n(); ++j)
+        {
+          if((*B)(i,j)!=0.0)
+          std::cout<<(*B)(i,j);
+        }
+        std::cout<<std::endl;
+      }
+
       std::cout << "prima\n";
       B_full.mmult(M, D);
       B_fullt.copy_transposed(B_full);
@@ -369,11 +379,11 @@ public:
             S->set(i, j, M2(i, j));
         }
       }
-      
+
       std::cout << "dopo\n";
       S->compress(VectorOperation::add);
       std::cout << "dopo\n";
-      preconditionerF.initialize(*F); //PROBLEMA
+      // preconditionerF.initialize(*F); //PROBLEMA
       preconditionerS.initialize(*S);
       std::cout << "dopo\n";
     }
@@ -398,7 +408,7 @@ public:
       solver_gmres_velocity.solve(*F,
                                   dst.block(0),
                                   src.block(0),
-                                  preconditionerF);
+                                  PreconditionIdentity());
       std::cout << "1\n";
 
       B->vmult(dst.block(1), dst.block(0));
@@ -505,9 +515,6 @@ protected:
   // Inlet velocity.
   InletVelocity inlet_velocity;
 
-  // Final time.
-  const double T;
-
   // Discretization. ///////////////////////////////////////////////////////////
 
   // Mesh file name.
@@ -518,7 +525,8 @@ protected:
 
   // Polynomial degree used for pressure.
   const unsigned int degree_pressure;
-
+  // Final time.
+  const double T;
   // TIme step.
   const double deltat;
 

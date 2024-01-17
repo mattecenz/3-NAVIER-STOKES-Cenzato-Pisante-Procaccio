@@ -370,6 +370,7 @@ public:
     {
       B = &B_;
       F = &F_;
+      preconditionerF.initialize(F_); 
 
       FullMatrix<double> D(F->m(), F->n());
       D.operator=(0);
@@ -412,7 +413,6 @@ public:
       exportmatrix(S,"output_S.txt");
       exportmatrix(B,"output_B.txt");
       
-      // preconditionerF.initialize(*F); //PROBLEMA
       preconditionerS.initialize(*S);
     }
     void
@@ -468,7 +468,7 @@ public:
       solver_gmres_velocity.solve(D,
                                   dst.block(0),
                                   tmp2,
-                                  I);
+                                  PreconditionIdentity());
       std::cout << "fine\n";
     }
 
@@ -480,7 +480,7 @@ public:
 
     TrilinosWrappers::PreconditionILU preconditionerF;
     TrilinosWrappers::PreconditionILU preconditionerS;
-    PreconditionIdentity I;
+
     mutable TrilinosWrappers::MPI::Vector tmp;
     mutable TrilinosWrappers::MPI::Vector tmp2;
     const double alpha = 0.5;

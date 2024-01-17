@@ -248,6 +248,8 @@ public:
                                preconditioner_pressure);
     }
 
+    
+
   protected:
     // Velocity stiffness matrix.
     const TrilinosWrappers::SparseMatrix *velocity_stiffness;
@@ -332,6 +334,36 @@ public:
   class PreconditionSIMPLE
   {
   public:
+
+  void exportmatrix(TrilinosWrappers::SparseMatrix *A, std::string outputFileName)
+{
+    // Write the matrix to the file
+    std::ofstream outputFile(outputFileName);
+    if (outputFile.is_open())
+    {
+        int rows = A->m(), cols = A->n();
+        // Write dimensions to the first row
+        outputFile << rows << " " << cols << std::endl;
+
+        // Write matrix data
+        for (int i = 0; i < rows; ++i)
+        {
+            for (int j = 0; j < cols; ++j)
+            {
+                outputFile << std::setw(8) << std::fixed << std::setprecision(4) << (*A)(i, j) << " ";
+            }
+            outputFile << std::endl;
+        }
+        std::cout << "Computed matrix has been written to " << outputFileName << std::endl;
+
+        // Close the file
+        outputFile.close();
+    }
+    else
+    {
+        std::cerr << "Error opening file for writing." << std::endl;
+    }
+}
     void
     initialize(const TrilinosWrappers::SparseMatrix &F_,
                TrilinosWrappers::SparseMatrix &B_)
@@ -352,16 +384,6 @@ public:
       FullMatrix<double> B_fullt(B->n(), B->m());
       B_full.copy_from(*B);
 
-      for (unsigned int i = 0; i < M2.m(); ++i)
-      {
-        for (unsigned int j = 0; j < M2.n(); ++j)
-        {
-          if((*B)(i,j)!=0.0)
-          std::cout<<(*B)(i,j);
-        }
-        std::cout<<std::endl;
-      }
-
       std::cout << "prima\n";
       B_full.mmult(M, D);
       B_fullt.copy_transposed(B_full);
@@ -376,16 +398,22 @@ public:
         for (unsigned int j = 0; j < M2.n(); ++j)
         {
           if (M2(i, j) != 0.0)
+          {
             S->set(i, j, M2(i, j));
+            
+          }
+          
         }
+        std::cout<<std::endl;
       }
 
-      std::cout << "dopo\n";
       S->compress(VectorOperation::add);
-      std::cout << "dopo\n";
+
+      exportmatrix(S,"output_S.txt");
+      exportmatrix(B,"output_B.txt");
+      
       // preconditionerF.initialize(*F); //PROBLEMA
       preconditionerS.initialize(*S);
-      std::cout << "dopo\n";
     }
     void
     vmult(TrilinosWrappers::MPI::BlockVector &dst,
@@ -409,7 +437,7 @@ public:
                                   dst.block(0),
                                   src.block(0),
                                   PreconditionIdentity());
-      std::cout << "1\n";
+    
 
       B->vmult(dst.block(1), dst.block(0));
       dst.block(1).sadd(-1.0, src.block(1));
@@ -424,7 +452,7 @@ public:
       solver_gmres2.solve(*S,
                           tmp,
                           dst.block(1),
-                          preconditionerS);
+                          PreconditionIdentity());
       std::cout << "3\n";
 
       D.vmult(tmp, dst.block(0));

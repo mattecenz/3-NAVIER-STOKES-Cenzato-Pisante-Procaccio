@@ -364,6 +364,33 @@ public:
         std::cerr << "Error opening file for writing." << std::endl;
     }
 }
+
+     void exportvector(TrilinosWrappers::MPI::Vector A, std::string outputFileName)
+{
+    // Write the matrix to the file
+    std::ofstream outputFile(outputFileName);
+    if (outputFile.is_open())
+    {
+        int rows = A.size();
+        // Write dimensions to the first row
+        outputFile << rows << " " << 1 << std::endl;
+
+        // Write matrix data
+        for (int i = 0; i < rows; ++i)
+        {
+            outputFile << std::setw(8) << std::fixed << std::setprecision(4) << A(i) << " "; 
+            outputFile << std::endl;
+        }
+        std::cout << "Computed matrix has been written to " << outputFileName << std::endl;
+
+        // Close the file
+        outputFile.close();
+    }
+    else
+    {
+        std::cerr << "Error opening file for writing." << std::endl;
+    }
+}
     void
     initialize(const TrilinosWrappers::SparseMatrix &F_,
                TrilinosWrappers::SparseMatrix &B_)
@@ -371,12 +398,19 @@ public:
       B = &B_;
       F = &F_;
       preconditionerF.initialize(F_); 
+      TrilinosWrappers::MPI::Vector vett;
+      TrilinosWrappers::MPI::Vector tmp;
+      for(int i=0;i<F->m();i++)
+        vett(i)= 1.0;
+      preconditionerF.vmult(tmp,vett);
+      exportvector(tmp,"vett.txt");
+
 
       FullMatrix<double> D(F->m(), F->n());
       D.operator=(0);
       for (size_t i = 0; i < F->m(); i++)
       {
-        D.set(i, i, 1 / F->diag_element(i));
+        D.set(i, i, - 1 / F->diag_element(i));
       }
 
       FullMatrix<double> M(B->m(), D.n());
@@ -400,10 +434,8 @@ public:
         {
           if (M2(i, j) != 0.0)
           {
-            S->set(i, j, M2(i, j));
-            
-          }
-          
+            S->set(i, j, M2(i, j));            
+          }       
         }
         std::cout<<std::endl;
       }
@@ -425,7 +457,7 @@ public:
       D.reinit(sp);
       for (size_t i = 0; i < F->m(); i++)
       {
-        D.set(i, i, F->diag_element(i));
+        D.set(i, i, - F->diag_element(i));
       }
 
       SolverControl solver_control_velocity(1000,
@@ -474,7 +506,6 @@ public:
 
   protected:
     TrilinosWrappers::SparseMatrix *B;
-    TrilinosWrappers::SparseMatrix *Bt;
     const TrilinosWrappers::SparseMatrix *F;
     TrilinosWrappers::SparseMatrix *S;
 
@@ -493,8 +524,7 @@ public:
                const double &T_,
                const double &deltat_)
       : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)), mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)), pcout(std::cout, mpi_rank == 0), mesh_file_name(mesh_file_name_), degree_velocity(degree_velocity_), degree_pressure(degree_pressure_), T(T_), deltat(deltat_), mesh(MPI_COMM_WORLD)
-  {
-  }
+  {}
 
   // Setup system.
   void
@@ -504,7 +534,16 @@ public:
   void
   solve();
 
+  // Compute lift and drag.
+  void 
+  compute_forces();
+
 protected:
+
+  // Drag and lift.
+  double drag;
+  double lift;
+
   // Assemble system. We also assemble the pressure mass matrix (needed for the
   // preconditioner).
   void
@@ -533,6 +572,8 @@ protected:
 
   // Kinematic viscosity [m2/s].
   const double nu = 1;
+
+  const double rho = 1.;
 
   // Outlet pressure [Pa].
   const double p_out = 10;

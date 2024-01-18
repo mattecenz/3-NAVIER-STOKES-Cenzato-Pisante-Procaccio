@@ -443,3 +443,72 @@ NavierStokes::solve()
 		}
 
 }
+
+void
+NavierStokes::compute_forces()
+{
+  const unsigned int dofs_per_cell = fe->dofs_per_cell;
+  const unsigned int n_q           = quadrature->size();
+  const unsigned int n_q_face      = quadrature_face->size();
+
+  FEValues<dim>     fe_values(*fe,
+                          *quadrature,
+                          update_values | update_gradients |
+                            update_quadrature_points | update_JxW_values);
+  FEFaceValues<dim> fe_face_values(*fe,
+                                   *quadrature_face,
+                                   update_values | update_normal_vectors |
+                                     update_JxW_values);
+
+  FEValuesExtractors::Vector velocity(0);
+  FEValuesExtractors::Scalar pressure(dim);
+
+  Tensor<1,dim> nx,ny;
+  for(unsigned int i=0;i<dim;i++){
+    nx[i]=0.;
+    ny[i]=0.;
+  }
+  nx[0]=1.;
+  ny[1]=1.;
+
+  drag = 0.0;
+  lift = 0.0;
+
+  for (const auto &cell : dof_handler.active_cell_iterators())
+    {
+      if (!cell->is_locally_owned())
+        continue;
+
+      fe_values.reinit(cell);
+
+          if (cell->at_boundary())
+            {
+              for (unsigned int f = 0; f < cell->n_faces(); ++f)
+                {
+                  if (cell->face(f)->at_boundary() &&
+                      (cell->face(f)->boundary_id() == 7 ||
+                      cell->face(f)->boundary_id() == 8 ||
+                      cell->face(f)->boundary_id() == 9 ||
+                      cell->face(f)->boundary_id() == 10))
+                    {
+                      fe_face_values.reinit(cell, f);
+
+                      for (unsigned int q = 0; q < n_q_face; ++q)
+                        {
+                          drag += solution.block(1)(q) * 
+                          scalar_product(fe_face_values.normal_vector(q),nx) *
+                          fe_face_values.JxW(q);
+
+                          //
+                          //drag += rho * nu * tangent_vector(q) * solution.block(0)(q);
+
+                          lift += solution.block(1)(q) * 
+                          scalar_product(fe_face_values.normal_vector(q),ny) *
+                          fe_face_values.JxW(q);
+                        }
+                    }
+                }
+            }
+    }
+    pcout << drag << " " << lift << std::endl; 
+}

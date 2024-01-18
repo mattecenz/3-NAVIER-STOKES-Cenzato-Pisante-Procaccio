@@ -189,9 +189,9 @@ NavierStokes::assemble()
   FEValuesExtractors::Vector velocity(0);
   FEValuesExtractors::Scalar pressure(dim);
 
-	//
+	// Store the current velocity value in a tensor 
 	std::vector<Tensor<1,dim>> current_velocity_values(n_q);
-	std::vector<Tensor<2,dim>> current_velocity_gradients(n_q);
+	//std::vector<Tensor<2,dim>> current_velocity_gradients(n_q);
 
   for (const auto &cell : dof_handler.active_cell_iterators())
     {
@@ -204,7 +204,7 @@ NavierStokes::assemble()
 			cell_rhs                  = 0.0;
       cell_pressure_mass_matrix = 0.0;
 
-			//
+			//Retrieve the current solution values.
 			fe_values[velocity].get_function_values(solution,current_velocity_values);
 
       for (unsigned int q = 0; q < n_q; ++q)
@@ -227,12 +227,12 @@ NavierStokes::assemble()
                                    fe_values[velocity].gradient(j, q)) *
                     fe_values.JxW(q);
 
-									//
+									// Time derivative discretization.
 									cell_matrix(i, j) += fe_values[velocity].value(i, q) *
 									                     fe_values[velocity].value(j, q) /
 																			 deltat * fe_values.JxW(q);
 
-									//
+									// Convective term.
 									cell_matrix(i, j) += current_velocity_values[q] *
 								                       fe_values[velocity].gradient(j, q) *
 																			 fe_values[velocity].value(i, j) *
@@ -259,7 +259,7 @@ NavierStokes::assemble()
                                             fe_values[velocity].value(i, q)) *
                              fe_values.JxW(q);
 
-							//
+							// Time derivative discretization on the right hand side
 							cell_rhs(i) += scalar_product(current_velocity_values[q],
 							                              fe_values[velocity].value(i,q)) /
 														 deltat * fe_values.JxW(q);
@@ -271,6 +271,7 @@ NavierStokes::assemble()
         {
           for (unsigned int f = 0; f < cell->n_faces(); ++f)
             {
+							// 1 is the inlet velocity and 3 is the outlet
               if (cell->face(f)->at_boundary() &&
                   (cell->face(f)->boundary_id() != 1 && cell->face(f)->boundary_id() != 3))
                 {
@@ -287,7 +288,6 @@ NavierStokes::assemble()
                       
 											for (unsigned int i = 0; i < dofs_per_cell; ++i)
                         {
-
 													cell_rhs(i) +=
 														scalar_product(neumann_loc_tensor,
 														fe_boundary_values[velocity].value(i,q)) *
@@ -346,7 +346,10 @@ NavierStokes::solve_time_step()
 {
   pcout << "===============================================" << std::endl;
 
-  SolverControl solver_control(100000, 1e-4 * system_rhs.l2_norm());
+	const unsigned int maxiter=200000;
+	const double tol=1e-2*system_rhs.l2_norm();
+
+  SolverControl solver_control(maxiter,tol);
 
   SolverGMRES<TrilinosWrappers::MPI::BlockVector> solver(solver_control);
 
@@ -361,9 +364,10 @@ NavierStokes::solve_time_step()
 
 	PreconditionIdentity preconditioner;
 
-  pcout << "Solving the linear system" << std::endl;
+  pcout << "Solving the linear system with expected maxiter: " << maxiter;
+	pcout << " and tollerance: " << tol << std::endl;
   solver.solve(system_matrix, solution_owned, system_rhs, preconditioner);
-  pcout << "  " << solver_control.last_step() << " GMRES iterations"
+  pcout << "Result:  " << solver_control.last_step() << " GMRES iterations"
         << std::endl;
 
   solution = solution_owned;

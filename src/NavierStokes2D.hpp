@@ -108,12 +108,6 @@ public:
 		{
 			return 0.;
 		}
-		virtual void
-		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override
-		{
-			values[0]=0.0;
-			values[1]=0.0;
-		}
 	};
 
 	// Function for the initial condition.
@@ -128,15 +122,16 @@ public:
 		value(const Point<dim> &/*p*/, const unsigned int component) const
 		{
 			if(component == 0)
-				return 0.5;
+				return 0.;
 			else
 				return 0.;
 		}
 		virtual void
 		vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override
 		{
-			values[0]=0.5;
+			values[0]=0.;
 			values[1]=0.;
+			values[2]=0.;
 		}
 	};
 
@@ -154,14 +149,15 @@ public:
     {}
 
     virtual void
-    vector_value(const Point<dim> &p, Vector<double> &values) const override
+    vector_value(const Point<dim> &/*p*/, Vector<double> &values) const override
     {
       values[0]=1.;
     	values[1]=0.;
+			values[2]=0.;
     }
 
     virtual double
-    value(const Point<dim> &p, const unsigned int component = 0) const override
+    value(const Point<dim> &/*p*/, const unsigned int component = 0) const override
     {
       if (component == 0)
         return 1.;
@@ -169,8 +165,6 @@ public:
         return 0;
     }
 
-  protected:
-    const double alpha = 1.0;
   };
 
   // Since we're working with block matrices, we need to make our own
@@ -324,10 +318,10 @@ public:
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
+		, T(T_)
     , mesh_file_name(mesh_file_name_)
     , degree_velocity(degree_velocity_)
     , degree_pressure(degree_pressure_)
-		, T(T_)
 		, deltat(deltat_)
     , mesh(MPI_COMM_WORLD)
   {}
@@ -369,10 +363,7 @@ protected:
   // Problem definition. ///////////////////////////////////////////////////////
 
   // Kinematic viscosity [m2/s].
-  const double nu = 1;
-
-  // Outlet pressure [Pa].
-  const double p_out = 10;
+  const double nu = 1e-3;
 
   // Forcing term.
   ForcingTerm forcing_term;

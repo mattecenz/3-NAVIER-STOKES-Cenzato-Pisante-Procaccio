@@ -147,6 +147,9 @@ NavierStokes::setup()
     system_matrix.reinit(sparsity);
 		pressure_mass.reinit(sparsity_pressure_mass);
 
+		// Apply the sparsity also to the preconditioner
+		preconditioner.make_sparsity(sparsity);
+
     pcout << "  Initializing the system right-hand side" << std::endl;
     system_rhs.reinit(block_owned_dofs, MPI_COMM_WORLD);
     pcout << "  Initializing the solution vector" << std::endl;
@@ -342,7 +345,10 @@ NavierStokes::solve_time_step()
 {
   pcout << "===============================================" << std::endl;
 
-  SolverControl solver_control(100000, 1e-6 * system_rhs.l2_norm());
+	const unsigned int maxiter=10000;
+	const double tol=1e-4*system_rhs.l2_norm();
+
+  SolverControl solver_control(maxiter, tol);
 
   SolverGMRES<TrilinosWrappers::MPI::BlockVector> solver(solver_control);
 
@@ -355,12 +361,20 @@ NavierStokes::solve_time_step()
   //                          pressure_mass.block(1, 1),
   //                          system_matrix.block(1, 0));
 
-  PreconditionSIMPLE preconditioner;
-  preconditioner.initialize(system_matrix.block(0,0), system_matrix.block(1,0));
+	//PreconditionIdentity preconditioner
+
+  //PreconditionSIMPLE preconditioner;
+  //MyPreconditionSIMPLE preconditioner;
+	pcout << " Assemblying the preconditioner... " << std::endl;
+	preconditioner.initialize(
+								system_matrix.block(0,0), system_matrix.block(1,0), system_matrix.block(0,1));
+	pcout << "done" << std::endl;
+  pcout << "===============================================" << std::endl;
 
 	//PreconditionIdentity preconditioner;
 
-  pcout << "Solving the linear system" << std::endl;
+  pcout << "Solving the linear system with expected maxiter: " << maxiter;
+	pcout << " and tollerance: "<< tol << std::endl;
   solver.solve(system_matrix, solution_owned, system_rhs, preconditioner);
   pcout << "  " << solver_control.last_step() << " GMRES iterations"
         << std::endl;

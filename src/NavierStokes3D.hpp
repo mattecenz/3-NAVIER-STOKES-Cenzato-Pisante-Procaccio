@@ -516,6 +516,55 @@ public:
     mutable TrilinosWrappers::MPI::Vector tmp2;
     const double alpha = 0.5;
   };
+	class MyPreconditionSIMPLE
+	{
+		public:
+    	void make_sparsity(TrilinosWrappers::BlockSparsityPattern &sparsity){
+				matrix_preconditioner.reinit(sparsity);
+			}
+			void
+    	initialize(const TrilinosWrappers::SparseMatrix &F_,
+     	          const TrilinosWrappers::SparseMatrix &B_,
+								const TrilinosWrappers::SparseMatrix &B_t)
+    	{
+				matrix_preconditioner = 0.0;
+
+
+				matrix_preconditioner.block(0, 0).copy_from(F_);
+				matrix_preconditioner.block(1, 0).copy_from(B_);
+				//Construct the inverse of the diagonal
+				TrilinosWrappers::MPI::Vector diagonal;
+				diagonal=0.0;
+				for(size_t i=0;i<F_.m();++i)
+					diagonal[i]=1./F_.diag_element(i);
+
+				F_.mmult(matrix_preconditioner.block(0, 1), B_t, diagonal);
+				B_.mmult(matrix_preconditioner.block(1, 1), B_t, diagonal);
+
+				matrix_preconditioner.block(1, 1) *=(1.-alpha);
+			}
+    	void
+    	vmult(TrilinosWrappers::MPI::BlockVector &dst,
+          	const TrilinosWrappers::MPI::BlockVector &src) const
+    	{
+				const unsigned int maxiter=100000;
+				const double tol=1e-2*src.l2_norm();
+				//std::cout << "Solving preconditioner with maxiter : " <<maxiter;
+				//std::cout << " and tollerance : " <<tol<<std::endl;
+      	SolverControl solver_control(maxiter,tol);
+      	SolverGMRES<TrilinosWrappers::MPI::BlockVector> solver(solver_control);
+      	solver.solve(matrix_preconditioner, dst, src, PreconditionBlockIdentity());
+
+				//std::cout << "Took " << solver_control.last_step() << " GMERS iterations" <<std::endl;
+
+			}
+		
+		protected:
+
+			const double alpha=0.5;
+
+			TrilinosWrappers::BlockSparseMatrix matrix_preconditioner;
+	};
 
   // Constructor.
   NavierStokes(const std::string &mesh_file_name_,

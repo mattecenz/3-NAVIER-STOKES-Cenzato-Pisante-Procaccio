@@ -1,0 +1,346 @@
+\documentclass{article}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+
+\title{Solving the Navier-Stokes Equations: A Finite Element Approach}
+\author{Cenzato, Pisante, Procaccio}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{document}
+
+\tableofcontents
+
+
+\section*{Introduction}
+
+This report aims to solve the unsteady, incompressible Navier-Stokes equations using the finite element method. The focus is on simulating the benchmark problem "flow past a cylinder" in two or three dimensions considering different values of the Reynolds number (\(Re \leq 200\)).
+
+
+
+The report will discuss the obtained results, the methods employed, their stability and accuracy, and the algorithmic and computational aspects.
+
+\section*{Navier-Stokes Equations}
+
+The system of Navier-Stokes equations to be solved is given by:
+
+\begin{equation}
+\begin{cases}
+\frac{\partial \mathbf{u}}{\partial t} + (\mathbf{u} \cdot \nabla)\mathbf{u} - \nu $\Delta$ \mathbf{u} + \nabla p &= \mathbf{f} \quad \text{in } \Omega, \\
+\nabla \cdot \mathbf{u} &= 0 \quad \text{in } \Omega, \\
+\mathbf{u} &= \mathbf{g} \quad \text{on } \Gamma_D \subset \partial \Omega, \\
+\nu \nabla \mathbf{u} \cdot \mathbf{n} - p &= \mathbf{h} \quad \text{on } \Gamma_N = \partial \Omega \setminus \Gamma_D, \\
+\mathbf{u}(t = 0) &= \mathbf{u}_0 \quad \text{in } \Omega.
+\end{cases}
+\end{equation}
+
+Here, \(\mathbf{u}\) represents the velocity vector field, \(p\) is the pressure, \(\nu\) is the kinematic viscosity, and \(\mathbf{f}\), \(\mathbf{g}\), and \(\mathbf{h}\) are given functions. The boundary conditions are applied on \(\Gamma_D\) and \(\Gamma_N\), and \(\mathbf{u}_0\) is the initial condition.
+
+
+\section{Mathematical model}
+
+Let $H^1_D(\Omega) = \{ v \in H^1(\Omega) \,|\, v = 0 \text{ on } C_D \}$, and let $V$ denote the space $H^1_D(\Omega)^3$, and $Q$ the space $L^2(\Omega). Then, multiplying by $v \in V$ and integrating over \Omega, and similarly for $q \in Q$, we obtain the weak form as follows: find $(u, p) \in V \times Q$ such that
+\begin{equation}
+\left\{
+\begin{aligned}
+    &\int_\Omega \frac{\partial u}{\partial t} v \,d\Omega + \int_\Omega m \nabla u : \nabla v \,d\Omega + \int_\Omega \left((u \cdot \nabla)u \right) \cdot v \,d\Omega - \int_\Omega p \nabla \cdot v \,d\Omega \\
+    &= \int_\Omega f_{\text{ext}} v \,d\Omega + \int_{\partial X} g_N v \,ds \quad \forall v \in V, \\
+    &\int_\Omega q \nabla \cdot u \,d\Omega = 0 \quad \forall q \in Q.
+\end{aligned}
+\right.
+\label{eq:weak_formulation}
+\end{equation}
+
+
+The weak form is discretized in time using a semi-implicit treatment of the nonlinear convective term, and the time derivative is discretized using a first-order finite difference. The problem is then discretized in space using stable finite elements. Let $\Omega_h$ be the space of finite elements defined by
+\[
+\Omega_h = \{ v_h \in C^0(\Omega_h) \,|\, |v_h|_K \in P_r, \, \forall K \in \mathcal{T}_h \},
+\]
+where $P_r$ is the space of polynomials of degree less than or equal to $r$, and $\mathcal{T}_h$ is a regular triangulation forming an approximation $\Omega_h$ of $\Omega$. Then, the discrete spaces for velocity and pressure are denoted by $V_h = \Omega_h^3 \cap V$ and $Q_h = X_h \cap Q$ respectively. Let $u_{n,h} \in V_h$ and $p_{n,h} \in Q_h$ be approximations of the solutions $u$ and $p$ at time $t_n$. We denote by $u_1, \ldots, u_{N_u}$ the finite element basis of $V_h$ and by $\phi_1, \ldots, \phi_{N_p}$ the basis of $Q_h$. Then, we can write
+\[
+u_{n,h}(x) = \sum_{i=1}^{N_u} u_{n,i} u_i(x), \quad p_{n,h}(x) = \sum_{i=1}^{N_p} p_{n,i} \phi_i(x).
+\]
+
+We approximate $(u, p)$ at time $t_n$ by $u_{n,h}, p_{n,h} \in V_h \times Q_h$. Thanks to the Galerkin projection, we obtain the discrete system
+\begin{equation}
+\left\{
+\begin{aligned}
+    &\frac{1}{\Delta t} \int_{\Omega_h} u_{n+1,h} u_i \,dX + \int_{\Omega_h} \nabla u_{n+1,h} : \nabla u_i \,dX \\
+    &\quad+ \int_{\Omega_h} \left((u_{n,h} \cdot \nabla)u_{n+1,h} \right) \cdot u_i \,dX - \int_{\Omega_h} p_{n+1,h} \nabla \cdot u_i \,dX \\
+    &= \int_{\Omega_h} f_{\text{ext}}(t_{n+1}) u_i \,dX + \int_{\partial \Omega_h} g_N(t_{n+1}) u_i \,ds \quad \forall i = 1, \ldots, N_u, \\
+    &\int_{\Omega_h} q \nabla \cdot u_{n+1,h} \,dX = 0 \quad \forall q \in Q_h.
+\end{aligned}
+\right.
+\end{equation}
+
+At each time step, these equations can be rewritten as a linear system of the form \(Ax = b\) with:
+\[
+A = \begin{bmatrix} F & B^T \\ -B & 0 \end{bmatrix} x =\begin{bmatrix} u_{n+1} \\ p_{n+1} \end{bmatrix}  b=\begin{bmatrix} G \\ 0 \end{bmatrix}
+\]
+with \( F = \frac{1}{\Delta t} M + A + C(U_n) \), where \( M \) is the fluid mass matrix, \( A \) is the stiffness matrix, and \( C(U_n) \) represents the linearized convection terms of the momentum equation. \( B \) and \( B^T \) are the discretized counterparts of the divergence operator and the gradient operator, respectively. \( U_{n+1} = (u_1, \ldots, u_{N_u})^T \) is the vector of velocity unknowns at time \( t = t_{n+1} \), and \( P_{n+1} = (p_1, \ldots, p_{N_p})^T \) is the vector of pressure unknowns.
+
+\( G \) is a known vector depending on the discretized source force, \( U_n \), and on \( f \), \( g_D \), and \( g_N \). This setting serves as a simple yet representative scenario to test preconditioners for the Navier–Stokes equations. The considered discretization in time and space is adequate for testing various preconditioners with different benchmark problems. In particular, no stabilization techniques have been used in this work.
+
+
+
+\section{Objective}
+The primary objective of this study is to employ a Finite Element approach to solve the system of equations described earlier. The focus is on utilizing different preconditioners, namely SIMPLE and aSIMPLE. Our analysis will be conducted on a designated test mesh, programmed with .geo file. The key performance metrics for evaluation will be the lift and drag coefficients plotted over time for varying Reynolds numbers.
+
+The coefficients, denoted as \(C_D\) (drag coefficient) and \(C_L\) (lift coefficient), are mathematically defined as:
+
+\begin{equation}
+C_D = \frac{F_D}{U^2L}, \quad C_L = \frac{F_L}{U^2L} \label{eq:coefficients}
+\end{equation}
+
+Here, \(F_D\) and \(F_L\) represent the forces acting on the cylindrical obstacle in the parallel and perpendicular directions to the fluid flow, respectively.The drag and lift forces are
+\begin{align*}
+    F_D &= \int_S \left(\rho\nu \frac{\partial v_t}{\partial n}n_y - Pn_x\right) \, dS, \\
+    F_L &= -\int_S \left(\rho\nu \frac{\partial v_t}{\partial n}n_x + Pn_y\right) \, dS,
+\end{align*}
+with the following notations: circle $S$, normal vector $n$ on $S$ with x-component $n_x$ and y-component $n_y$, tangential velocity $v_t$ on $S$, and tangent vector $t = (n_y, -n_x)$. The drag and lift coefficients are
+\begin{align*}
+    c_D &= \frac{2F_D}{\rho U^2D}, 
+    c_L &= \frac{2F_L}{\rho U^2D}.
+\end{align*}
+
+The parameters \(U\) and \(L\) stand for the reference flow velocity and the cross-sectional length of the obstacle. This investigation aims to provide a comprehensive understanding of the fluid dynamics using advanced numerical methods and preconditioners.
+
+
+
+\section{Domain of Computation}
+The domain of computation will be both 2D and 3D as shown in figure \ref{fig:2D} and figure \ref{fig:3D}:
+\begin{figure}
+    \centering
+    \includegraphics[width=0.6\linewidth]{2D.png}
+    \caption{Enter Caption}
+    \label{fig:2D}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\linewidth]{image.png}
+    \caption{Geometry of 2D test cases with boundary conditions}
+    \label{fig:3D}
+\end{figure}
+For the 2D test cases the flow around a cylinder with circular cross–section is considered.
+Some definitions are introduced to specify the values which have to be computed. $H = 0.41 \, \text{m}$ is the channel height and $D = 0.1 \, \text{m}$ is the cylinder diameter. The Reynolds number is defined by $Re = \frac{UD}{\nu}$ with the mean velocity $U(t) = \frac{2U(0, H/2, t)}{3}$. 
+The Strouhal number is defined as $St = \frac{Df}{U}$, where $f$ is the frequency of separation. The length of recirculation is $L_a = x_r - x_e$, where $x_e = 0.25$ is the x-coordinate of the end of the cylinder, and $x_r$ is the x-coordinate of the end of the recirculation area. As a further reference value, the pressure difference $\Delta P = \Delta P(t) = P(x_a, y_a, t) - P(x_e, y_e, t)$ is defined, with the front and end point of the cylinder $(x_a, y_a) = (0.15, 0.2)$ and $(x_e, y_e) = (0.25, 0.2)$, respectively.
+
+\section{C++ Implementation}
+
+The code exhibits a well-structured and object-oriented design, leveraging the capabilities of the Deal.ii library. The primary class, \texttt{NavierStokes}, encapsulates the entire simulation process, fostering modularity and ease of maintenance. The use of nested classes for the forcing term, boundary conditions, and initial conditions enhances the code's readability.
+
+\subsection{Finite Element Setup}
+
+The finite element setup is a crucial aspect of the code, initiated by the \texttt{setup} method. This method initializes the simulation by creating a mesh, defining finite element spaces, and setting up matrices and vectors for the linear system. The mesh is read from a file, and the degrees of freedom for velocity and pressure are specified.
+
+\subsection{Assemble of the system}
+
+The assembly of the system in the Navier-Stokes solver involves the computation of various matrices and vectors that form the linear system of equations representing the discretized Navier-Stokes equations. The process is carried out in the \texttt{NavierStokes::assemble()} function. Let's break down the key steps:
+
+\begin{itemize}
+    \item \textbf{Initialization:} The function initializes necessary parameters such as the number of degrees of freedom per cell (\texttt{dofs\_per\_cell}) and the number of quadrature points for the volume (\texttt{n\_q}) and faces (\texttt{n\_q\_face}). It also sets up \texttt{FEValues} and \texttt{FEFaceValues} objects for accessing finite element values and face values.
+
+    \item \textbf{Matrix and Vector Initialization:} Matrices (\texttt{cell\_matrix}, \texttt{cell\_pressure\_mass\_matrix}) and vectors (\texttt{cell\_rhs}) are initialized for each cell. These represent the contributions of the cell to the global system matrix and right-hand side.
+
+    \item \textbf{Iteration over Cells:} The assembly process iterates over all locally-owned cells in the finite element domain. For each cell:
+        \begin{itemize}
+            \item \textbf{Finite Element Values:} Finite element values for velocity and pressure are extracted and stored.
+            
+            \item \textbf{Integral Assembly:} The code performs the assembly of the Navier-Stokes system matrices and vectors. Here is a breakdown of the major components:
+
+\begin{itemize}
+  \item \textbf{Viscosity Term:} Computes the contribution of the viscosity term to the system matrix.
+  \item \textbf{Convective Term:} Calculates the convective term and adds it to the system matrix.
+  \item \textbf{Pressure Terms:} Handles pressure terms in the momentum and continuity equations.
+  \item \textbf{Pressure Mass Matrix:} Computes contributions to the pressure mass matrix.
+  \item \textbf{Forcing Terms:} Accounts for external forcing terms in the right-hand side vector.
+\end{itemize}
+            Integrals over the cell are computed for terms related to viscosity, pressure, and forcing. These contributions are added to the local cell matrices (\texttt{cell\_matrix}, \texttt{cell\_pressure\_mass\_matrix}) and vector (\texttt{cell\_rhs}).
+            
+            \item \textbf{Neumann Boundary Conditions:} Contributions from Neumann boundary conditions are incorporated into the right-hand side vector (\texttt{cell\_rhs}).
+        \end{itemize}
+    
+    \item \textbf{Global Assembly:} The local contributions from each cell are added to the global system matrix (\texttt{system\_matrix}), pressure mass matrix (\texttt{pressure\_mass}), and right-hand side vector (\texttt{system\_rhs}).
+
+    \item \textbf{Dirichlet Boundary Conditions:} Dirichlet boundary conditions are enforced by setting prescribed values at specific degrees of freedom.
+
+    \item \textbf{Compression:} The assembled system matrices and vectors are compressed to remove zero entries and optimize storage.
+\end{itemize}
+
+This assembly process ensures that the Navier-Stokes equations are appropriately discretized and ready for the solution phase.
+
+\subsection{Assemble of the preconditioner}
+\subsubsection{SIMPLE preconditioner}
+
+The Semi-Implicit Method for Pressure Linked Equations (SIMPLE) is a numerical technique employed in fluid dynamics simulations. This method initially solves the momentum equation and subsequently updates the pressure field and velocity field to conserve mass through the continuity equation.
+The SIMPLE method can be interpreted as if it were associated with a preconditioner denoted as \(P_{\text{SIMPLE}}\). This preconditioner is expressed as the product of two matrices:
+
+\begin{equation*}
+    P_{\text{SIMPLE}} =
+    \begin{bmatrix}
+        F & 0 \\
+        B & -\hat{S}
+    \end{bmatrix}
+    \begin{bmatrix}
+        I & D^{-1} B^T \\
+        0 & \alpha I
+    \end{bmatrix},
+\end{equation*}
+
+where \(D\) represents the diagonal of matrix \(F\), and \(\alpha \in (0, 1]\) is a parameter damping the pressure update. The matrix \(\hat{S}\) is defined as:
+
+\begin{equation}
+    \hat{S} = B D^{-1} B^T.
+\end{equation}
+
+The efficiency of SIMPLE is particularly notable when the problem matrix is diagonally dominant. Specifically, this holds true when the time step size \(\Delta t\) is sufficiently small. However, the efficiency diminishes as \(\Delta t\) increases. In such cases, the approximation \(eS\) becomes a suboptimal estimate of the exact Schur complement \(S\) within the approximation of the Schur complement.
+
+\subsubsection{aSIMPLE preconditioner}
+The approximate SIMPLE (aSIMPLE) preconditioner is derived from the factorization of the SIMPLE preconditioner. This method starts with the factorized form of the SIMPLE preconditioner and replaces the inverses of the algebraic operators with suitable approximations.
+The aSIMPLE preconditioner is expressed as the product of several matrices:
+
+\begin{equation}
+    P_{\text{aSIMPLE}} =
+    \begin{bmatrix}
+        D^{-1} & 0 \\
+        0 & I \\
+    \end{bmatrix}
+    \cdot
+    \begin{bmatrix}
+        I & B^T \\
+        0 & I \\
+    \end{bmatrix}
+    \cdot
+    \begin{bmatrix}
+        D & 0 \\
+        0 & \frac{1}{\alpha}I \\
+    \end{bmatrix}
+    \cdot
+    \begin{bmatrix}
+        I & 0\\
+        0 & -\hat{S}^{-1} \\
+    \end{bmatrix}
+    \cdot
+    \begin{bmatrix}
+        I & 0 \\
+        -B & I \\
+    \end{bmatrix}
+    \cdot
+    \begin{bmatrix}
+        \hat{F}^{-1} & 0 \\
+        0 & I \\
+    \end{bmatrix},
+\end{equation}
+
+where \(\hat{S}\) and \(\hat{F}\) are approximations of the Schur complement and the factorized form of the SIMPLE preconditioner.
+The aSIMPLE method requires the construction of two approximations, denoted as \(\hat{S}^{-1}\) and \(\hat{F}^{-1}\). These approximations are typically defined based on suitable preconditioners for \(\hat{S}^{-1}\) and \(F\).
+
+\subsection{Solver Algorithms}
+
+The code implements the time step solver for the Navier-Stokes equations using the GMRES iterative solver. Here's a breakdown of key components:
+
+\begin{itemize}
+  \item \textbf{Solver Configuration:} Sets up the GMRES solver with a specified maximum number of iterations (\texttt{maxiter}) set to 100000 and a tolerance based on the L2 norm of the right-hand side (\texttt{tol}).
+  \item \textbf{Preconditioner Initialization:} Initializes a custom preconditioner (commented-out options for other preconditioners are provided).
+  \item \textbf{Solver Execution:} Solves the linear system using GMRES with the specified preconditioner.
+\end{itemize}
+
+The solution is updated for the next time step.
+
+\subsection{Forces Computation}
+
+\subsection{Parallelization}
+
+\section{Test Cases}
+\subsection{3D Test Cases}
+\subsubsection{Test Case 2D-1 (Steady)}
+
+The inflow condition is given by:
+\[
+U(0, y) = \frac{4U_m y (H - y)}{H^2}, \quad V = 0
+\]
+with \(U_m = 0.3 \, \text{m/s}\), yielding the Reynolds number \(Re = 20\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), length of recirculation zone \(L_a\), and pressure difference \(\Delta P\).
+
+\subsubsection{Test Case 2D-2 (Unsteady)}
+
+The inflow condition is given by:
+\[
+U(0, y, t) = \frac{4U_m y (H - y)}{H^2}, \quad V = 0
+\]
+with \(U_m = 1.5 \, \text{m/s}\), yielding the Reynolds number \(Re = 100\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\) as functions of time for one period \([t_0, t_0 + \frac{1}{f}]\) (with \(f = f(c_L)\)), maximum drag coefficient \(c_{D_{\text{max}}}\), maximum lift coefficient \(c_{L_{\text{max}}}\), Strouhal number \(St\), and pressure difference \(\Delta P(t)\) at \(t = t_0 + \frac{1}{2f}\). The initial data (\(t = t_0\)) should correspond to the flow state with \(c_{L_{\text{max}}}\).
+
+\subsubsection{Test Case 2D-3 (Unsteady)}
+
+The inflow condition is given by:
+\[
+U(0, y, t) = \frac{4U_m y (H - y) \sin\left(\frac{\pi t}{8}\right)}{H^2}, \quad V = 0
+\]
+with \(U_m = 1.5 \, \text{m/s}\), and the time interval is \(0 \leq t \leq 8 \, \text{s}\). This gives a time-varying Reynolds number between \(0 \leq Re(t) \leq 100\). The initial data (\(t = 0\)) are \(U = V = P = 0\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\) as functions of time for \(0 \leq t \leq 8 \, \text{s}\), maximum drag coefficient \(c_{D_{\text{max}}}\), maximum lift coefficient \(c_{L_{\text{max}}}\), and pressure difference \(\Delta P(t)\) at \(t = 8 \, \text{s}\).
+
+\subsection{3D Test Cases}
+
+For the 3D test cases, the flows around a cylinder with square and circular cross-sections are considered. The problem configurations and boundary conditions are illustrated in figure \ref{fig:3D}. The outflow condition can be selected by the user. Some definitions are introduced to specify the values that have to be computed. The height and width of the channel are \(H = 0.41 \, \text{m}\), and the side length and diameter of the cylinder are \(D = 0.1 \, \text{m}\). The characteristic velocity is \(U(t) = \frac{4U(0, H/2, H/2, t)}{9}\), and the Reynolds number is defined by \(Re = \frac{UD}{\nu}\). The drag and lift forces are
+\begin{align*}
+    F_D &= \int_S \left(\rho\nu \frac{\partial v_t}{\partial n}n_y - p n_x\right) \, dS, \\
+    F_L &= -\int_S \left(\rho\nu \frac{\partial v_t}{\partial n}n_x + P n_y\right) \, dS,
+\end{align*}
+with the following notations: surface of the cylinder \(S\), normal vector \(n\) on \(S\) with x-component \(n_x\) and y-component \(n_y\), tangential velocity \(v_t\) on \(S\), and tangent vector \(t = (n_y, -n_x, 0)\). The drag and lift coefficients are
+\begin{align*}
+    c_D &= \frac{2F_D}{\rho U^2 D H}, \\
+    c_L &= \frac{2F_L}{\rho U^2 D H}.
+\end{align*}
+The Strouhal number is \(St = \frac{Df}{U}\) with the frequency of separation \(f\), and a pressure difference is defined by \(\Delta P = \Delta P(t) = P(x_a, y_a, z_a, t) - P(x_e, y_e, z_e, t)\) with coordinates \((x_a, y_a, z_a) = (0.45, 0.20, 0.205)\) and \((x_e, y_e, z_e) = (0.55, 0.20, 0.205)\).
+\subsubsection{Test Cases 3D-1Q and 3D-1Z (Steady)}
+
+The inflow condition is given by:
+\[
+U(0, y, z) = \frac{16U_m yz (H - y)(H - z)}{H^4}, \quad V = W = 0
+\]
+with \(U_m = 0.45 \, \text{m/s}\), yielding the Reynolds number \(Re = 20\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\).
+
+\subsubsection{Test Cases 3D-2Q and 3D-2Z (Unsteady)}
+
+The inflow condition is given by:
+\[
+U(0, y, z, t) = \frac{16U_m yz (H - y)(H - z)}{H^4}, \quad V = W = 0
+\]
+with \(U_m = 2.25 \, \text{m/s}\), yielding the Reynolds number \(Re = 100\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\) as functions of time for three periods \([t_0, t_0 + \frac{3}{f}]\) (with \(f = f(c_L)\)), maximum drag coefficient \(c_{D_{\text{max}}}\), maximum lift coefficient \(c_{L_{\text{max}}}\), and Strouhal number \(St\). The initial data (\(t = t_0\)) are arbitrary, however, for fully developed flow.
+
+\subsubsection{ Test Cases 3D-3Q and 3D-3Z (Unsteady)}
+
+The inflow condition is given by:
+\[
+U(0, y, z, t) = \frac{16U_m yz (H - y)(H - z) \sin\left(\frac{\pi t}{8}\right)}{H^4}, \quad V = W = 0
+\]
+with \(U_m = 2.25 \, \text{m/s}\). The time interval is \(0 \leq t \leq 8 \, \text{s}\). This yields a time-varying Reynolds number between \(0 \leq Re(t) \leq 100\). The initial data (\(t = 0\)) are \(U = V = P = 0\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\) as functions of time for \(0 \leq t \leq 8 \, \text{s}\), maximum drag coefficient \(c_{D_{\text{max}}}\), maximum lift coefficient \(c_{L_{\text{max}}}\), and pressure difference \(\Delta P(t)\) for \(t = 8 \, \text{s}\).
+
+
+\section{Results}
+
+
+\section*{References}
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}
+
+

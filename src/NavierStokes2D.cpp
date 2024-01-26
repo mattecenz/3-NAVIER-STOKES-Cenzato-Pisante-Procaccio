@@ -346,8 +346,8 @@ NavierStokes::solve_time_step()
 {
   pcout << "===============================================" << std::endl;
 
-	const unsigned int maxiter=300000;
-	const double tol=1e-8/**system_rhs.l2_norm()*/;
+	const unsigned int maxiter=100000;
+	const double tol=1e-4/**system_rhs.l2_norm()*/;
 
   SolverControl solver_control(maxiter,tol,true);
 	//solver_control.enable_history_data();

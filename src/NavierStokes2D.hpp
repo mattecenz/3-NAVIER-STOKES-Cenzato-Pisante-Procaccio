@@ -178,6 +178,20 @@ public:
     // Application of the preconditioner: we just copy the input vector (src)
     // into the output vector (dst).
     void
+    vmult(TrilinosWrappers::MPI::Vector       &dst,
+          const TrilinosWrappers::MPI::Vector &src) const
+    {
+      dst = src;
+    }
+
+  protected:
+  };
+  class PreconditionBlockIdentity
+  {
+  public:
+    // Application of the preconditioner: we just copy the input vector (src)
+    // into the output vector (dst).
+    void
     vmult(TrilinosWrappers::MPI::BlockVector       &dst,
           const TrilinosWrappers::MPI::BlockVector &src) const
     {
@@ -308,6 +322,76 @@ public:
     // Temporary vector.
     mutable TrilinosWrappers::MPI::Vector tmp;
   };
+	class MyPreconditionSIMPLE
+	{
+		public:
+			void
+    	initialize(const TrilinosWrappers::SparseMatrix &F_,
+     	          const TrilinosWrappers::SparseMatrix &B_,
+								const TrilinosWrappers::SparseMatrix &B_t)
+    	{
+				F=&F_;
+				B=&B_;
+				B_T=&B_t;
+				//Construct the inverse of the diagonal
+				TrilinosWrappers::MPI::Vector diagonal;
+				diagonal=0.0;
+				for(size_t i=0;i<F_.m();++i){
+					diagonal[i]=1./F_.diag_element(i);
+					//Save it also in the sparse matrix
+					D_inv.set(i,i,1./F_.diag_element(i));
+				}
+				
+				//Create S_tilde
+				B_.mmult(S_tilde, B_t, diagonal);
+
+			}
+    	void
+    	vmult(TrilinosWrappers::MPI::BlockVector &dst,
+          	const TrilinosWrappers::MPI::BlockVector &src) const
+    	{
+				const unsigned int maxiter=100000;
+				const double tol=1e-6;
+      	SolverControl solver_control(maxiter,tol);
+      	
+				SolverGMRES<TrilinosWrappers::MPI::Vector> solver(solver_control);
+      	
+				//Store in temporaries the results
+				TrilinosWrappers::MPI::Vector y_u=src.block(0);
+				TrilinosWrappers::MPI::Vector y_p=src.block(1);
+
+				TrilinosWrappers::MPI::Vector temp_1=src.block(1);
+				
+				solver.solve(*F, y_u, src.block(0), PreconditionIdentity());
+				
+				B->vmult(temp_1,y_u);
+				temp_1-=src.block(1);
+
+				solver.solve(S_tilde, y_p, temp_1, PreconditionIdentity()); 
+				
+				dst.block(1).reinit(y_p);
+				dst.block(1)*=1./alpha;
+				temp_1.reinit(dst.block(0));
+
+				B_T->vmult(temp_1,dst.block(1));
+				//Cannot be same vector
+				D_inv.vmult(dst.block(0),temp_1);
+				dst.block(0)-=y_u;
+				dst.block(0)*=-1.;
+
+			}
+		
+		protected:
+
+			const double alpha=1.;
+
+			const TrilinosWrappers::SparseMatrix* F;
+			const TrilinosWrappers::SparseMatrix* B_T;
+			const TrilinosWrappers::SparseMatrix* B;
+			TrilinosWrappers::SparseMatrix S_tilde;
+			TrilinosWrappers::SparseMatrix D_inv;
+
+	};
 
   // Constructor.
   NavierStokes(const std::string  &mesh_file_name_,
@@ -373,7 +457,7 @@ protected:
 
 	// Final time.
 	const double T;
-
+	
   // Discretization. ///////////////////////////////////////////////////////////
 
   // Mesh file name.

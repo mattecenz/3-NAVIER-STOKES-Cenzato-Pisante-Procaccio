@@ -235,7 +235,7 @@ NavierStokes::assemble()
 									// Convective term.
 									cell_matrix(i, j) += current_velocity_values[q] *
 								                       fe_values[velocity].gradient(j, q) *
-																			 fe_values[velocity].value(i, j) *
+																			 fe_values[velocity].value(i, q) *
 																			 fe_values.JxW(q);
 
                   // Pressure term in the momentum equation.
@@ -346,23 +346,23 @@ NavierStokes::solve_time_step()
 {
   pcout << "===============================================" << std::endl;
 
-	const unsigned int maxiter=200000;
-	const double tol=1e-2*system_rhs.l2_norm();
+	const unsigned int maxiter=300000;
+	const double tol=1e-8/**system_rhs.l2_norm()*/;
 
-  SolverControl solver_control(maxiter,tol);
+  SolverControl solver_control(maxiter,tol,true);
+	//solver_control.enable_history_data();
 
   SolverGMRES<TrilinosWrappers::MPI::BlockVector> solver(solver_control);
 
-  // PreconditionBlockDiagonal preconditioner;
-  // preconditioner.initialize(system_matrix.block(0, 0),
-  //                           pressure_mass.block(1, 1));
-
-  //PreconditionBlockTriangular preconditioner;
-  //preconditioner.initialize(system_matrix.block(0, 0),
-  //                          pressure_mass.block(1, 1),
-  //                          system_matrix.block(1, 0));
-
-	PreconditionIdentity preconditioner;
+	//PreconditionBlockIdentity preconditioner;
+	
+	MyPreconditionSIMPLE preconditioner;
+	pcout << " Assemblying the preconditioner... " << std::endl;
+	preconditioner.initialize(
+								system_matrix.block(0,0), system_matrix.block(1,0), system_matrix.block(0,1));
+	pcout << "done" << std::endl;
+  pcout << "===============================================" << std::endl;
+		
 
   pcout << "Solving the linear system with expected maxiter: " << maxiter;
 	pcout << " and tollerance: " << tol << std::endl;

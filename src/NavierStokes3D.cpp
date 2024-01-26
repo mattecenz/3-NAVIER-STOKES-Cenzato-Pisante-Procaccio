@@ -147,9 +147,6 @@ NavierStokes::setup()
     system_matrix.reinit(sparsity);
 		pressure_mass.reinit(sparsity_pressure_mass);
 
-		// Apply the sparsity also to the preconditioner
-		preconditioner.make_sparsity(sparsity);
-
     pcout << "  Initializing the system right-hand side" << std::endl;
     system_rhs.reinit(block_owned_dofs, MPI_COMM_WORLD);
     pcout << "  Initializing the solution vector" << std::endl;
@@ -194,7 +191,7 @@ NavierStokes::assemble()
 
 	//
 	std::vector<Tensor<1,dim>> current_velocity_values(n_q);
-	std::vector<Tensor<2,dim>> current_velocity_gradients(n_q);
+	//std::vector<Tensor<2,dim>> current_velocity_gradients(n_q);
 
   for (const auto &cell : dof_handler.active_cell_iterators())
     {
@@ -234,13 +231,13 @@ NavierStokes::assemble()
 									cell_matrix(i, j) += fe_values[velocity].value(i, q) *
 									                     fe_values[velocity].value(j, q) /
 																			 deltat * fe_values.JxW(q);
-
-									//
+									
+									// -> Invalid read in the first cell
 									cell_matrix(i, j) += current_velocity_values[q] *
 								                       fe_values[velocity].gradient(j, q) *
-																			 fe_values[velocity].value(i, j) *
+																			 fe_values[velocity].value(i, q) *
 																			 fe_values.JxW(q);
-
+									
                   // Pressure term in the momentum equation.
                   cell_matrix(i, j) -= fe_values[velocity].divergence(i, q) *
                                        fe_values[pressure].value(j, q) *
@@ -361,13 +358,14 @@ NavierStokes::solve_time_step()
   //                          pressure_mass.block(1, 1),
   //                          system_matrix.block(1, 0));
 
-	//PreconditionIdentity preconditioner
+	PreconditionBlockIdentity preconditioner;
 
   //PreconditionSIMPLE preconditioner;
   //MyPreconditionSIMPLE preconditioner;
+	
 	pcout << " Assemblying the preconditioner... " << std::endl;
-	preconditioner.initialize(
-								system_matrix.block(0,0), system_matrix.block(1,0), system_matrix.block(0,1));
+	//preconditioner.initialize(
+	//							system_matrix.block(0,0), system_matrix.block(1,0), system_matrix.block(0,1));
 	pcout << "done" << std::endl;
   pcout << "===============================================" << std::endl;
 

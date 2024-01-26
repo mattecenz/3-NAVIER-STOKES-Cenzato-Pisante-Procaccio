@@ -206,6 +206,20 @@ public:
 
   protected:
   };
+  class PreconditionBlockIdentity
+  {
+  public:
+    // Application of the preconditioner: we just copy the input vector (src)
+    // into the output vector (dst).
+    void
+    vmult(TrilinosWrappers::MPI::BlockVector &dst,
+          const TrilinosWrappers::MPI::BlockVector &src) const
+    {
+      dst = src;
+    }
+
+  protected:
+  };
 
   // Block-diagonal preconditioner.
   class PreconditionBlockDiagonal
@@ -400,7 +414,7 @@ public:
       preconditionerF.initialize(F_); 
       TrilinosWrappers::MPI::Vector vett;
       TrilinosWrappers::MPI::Vector tmp;
-      for(int i=0;i<F->m();i++)
+      for(unsigned int i=0;i<F->m();i++)
         vett(i)= 1.0;
       preconditionerF.vmult(tmp,vett);
       exportvector(tmp,"vett.txt");
@@ -516,32 +530,30 @@ public:
     mutable TrilinosWrappers::MPI::Vector tmp2;
     const double alpha = 0.5;
   };
+
 	class MyPreconditionSIMPLE
 	{
 		public:
-    	void make_sparsity(TrilinosWrappers::BlockSparsityPattern &sparsity){
-				matrix_preconditioner.reinit(sparsity);
-			}
 			void
     	initialize(const TrilinosWrappers::SparseMatrix &F_,
      	          const TrilinosWrappers::SparseMatrix &B_,
 								const TrilinosWrappers::SparseMatrix &B_t)
     	{
-				matrix_preconditioner = 0.0;
-
-
-				matrix_preconditioner.block(0, 0).copy_from(F_);
-				matrix_preconditioner.block(1, 0).copy_from(B_);
+				F=&F_;
+				B=&B_;
+				B_T=&B_t;
 				//Construct the inverse of the diagonal
 				TrilinosWrappers::MPI::Vector diagonal;
 				diagonal=0.0;
-				for(size_t i=0;i<F_.m();++i)
+				for(size_t i=0;i<F_.m();++i){
 					diagonal[i]=1./F_.diag_element(i);
+					//Save it also in the sparse matrix
+					D_inv.set(i,i,1./F_.diag_element(i));
+				}
+				
+				//Create S_tilde
+				B_.mmult(S_tilde, B_t, diagonal);
 
-				F_.mmult(matrix_preconditioner.block(0, 1), B_t, diagonal);
-				B_.mmult(matrix_preconditioner.block(1, 1), B_t, diagonal);
-
-				matrix_preconditioner.block(1, 1) *=(1.-alpha);
 			}
     	void
     	vmult(TrilinosWrappers::MPI::BlockVector &dst,
@@ -549,21 +561,55 @@ public:
     	{
 				const unsigned int maxiter=100000;
 				const double tol=1e-2*src.l2_norm();
-				//std::cout << "Solving preconditioner with maxiter : " <<maxiter;
-				//std::cout << " and tollerance : " <<tol<<std::endl;
       	SolverControl solver_control(maxiter,tol);
-      	SolverGMRES<TrilinosWrappers::MPI::BlockVector> solver(solver_control);
-      	solver.solve(matrix_preconditioner, dst, src, PreconditionBlockIdentity());
+      	
+				SolverGMRES<TrilinosWrappers::MPI::Vector> solver(solver_control);
+      	
+				//Store in temporaries the results
+				TrilinosWrappers::MPI::Vector y_u=src.block(0);
+				TrilinosWrappers::MPI::Vector y_p=src.block(1);
 
-				//std::cout << "Took " << solver_control.last_step() << " GMERS iterations" <<std::endl;
+				TrilinosWrappers::MPI::Vector temp_1=src.block(1);
+				
+				std::cout<<"Helo"<<std::endl;
 
+				solver.solve(*F, y_u, src.block(0), PreconditionIdentity());
+				
+				std::cout<<"Helo 1 "<<solver_control.last_step()<<std::endl;
+
+				B->vmult(temp_1,y_u);
+				temp_1-=src.block(1);
+
+				std::cout<<"Helo 2"<<std::endl;
+				
+				solver.solve(S_tilde, y_p, temp_1, PreconditionIdentity()); 
+				
+				std::cout<<"Helo 3 "<<solver_control.last_step()<<std::endl;
+
+				dst.block(1)=y_p;
+				dst.block(1)*=1./alpha;
+				temp_1=dst.block(1);
+
+				B_T->vmult(temp_1,dst.block(1));
+				//Cannot be same vector
+				D_inv.vmult(dst.block(0),temp_1);
+				dst.block(0)-=y_u;
+				dst.block(0)*=-1.;
+
+				std::cout<<"Helo 4"<<std::endl;
+			
 			}
 		
 		protected:
 
 			const double alpha=0.5;
 
-			TrilinosWrappers::BlockSparseMatrix matrix_preconditioner;
+			const TrilinosWrappers::SparseMatrix* F;
+			const TrilinosWrappers::SparseMatrix* B_T;
+			const TrilinosWrappers::SparseMatrix* B;
+			TrilinosWrappers::SparseMatrix S_tilde;
+			TrilinosWrappers::SparseMatrix D_inv;
+
 	};
 
   // Constructor.

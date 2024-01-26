@@ -262,8 +262,6 @@ public:
                                preconditioner_pressure);
     }
 
-    
-
   protected:
     // Velocity stiffness matrix.
     const TrilinosWrappers::SparseMatrix *velocity_stiffness;
@@ -345,272 +343,162 @@ public:
     mutable TrilinosWrappers::MPI::Vector tmp;
   };
 
-  class PreconditionSIMPLE
+  class PreconditionASIMPLE
   {
   public:
-
-  void exportmatrix(TrilinosWrappers::SparseMatrix *A, std::string outputFileName)
-{
-    // Write the matrix to the file
-    std::ofstream outputFile(outputFileName);
-    if (outputFile.is_open())
-    {
-        int rows = A->m(), cols = A->n();
-        // Write dimensions to the first row
-        outputFile << rows << " " << cols << std::endl;
-
-        // Write matrix data
-        for (int i = 0; i < rows; ++i)
-        {
-            for (int j = 0; j < cols; ++j)
-            {
-                outputFile << std::setw(8) << std::fixed << std::setprecision(4) << (*A)(i, j) << " ";
-            }
-            outputFile << std::endl;
-        }
-        std::cout << "Computed matrix has been written to " << outputFileName << std::endl;
-
-        // Close the file
-        outputFile.close();
-    }
-    else
-    {
-        std::cerr << "Error opening file for writing." << std::endl;
-    }
-}
-
-     void exportvector(TrilinosWrappers::MPI::Vector A, std::string outputFileName)
-{
-    // Write the matrix to the file
-    std::ofstream outputFile(outputFileName);
-    if (outputFile.is_open())
-    {
-        int rows = A.size();
-        // Write dimensions to the first row
-        outputFile << rows << " " << 1 << std::endl;
-
-        // Write matrix data
-        for (int i = 0; i < rows; ++i)
-        {
-            outputFile << std::setw(8) << std::fixed << std::setprecision(4) << A(i) << " "; 
-            outputFile << std::endl;
-        }
-        std::cout << "Computed matrix has been written to " << outputFileName << std::endl;
-
-        // Close the file
-        outputFile.close();
-    }
-    else
-    {
-        std::cerr << "Error opening file for writing." << std::endl;
-    }
-}
     void
     initialize(const TrilinosWrappers::SparseMatrix &F_,
-               TrilinosWrappers::SparseMatrix &B_)
+               const TrilinosWrappers::SparseMatrix &B_,
+               const TrilinosWrappers::SparseMatrix &B_t)
     {
-      B = &B_;
       F = &F_;
-      preconditionerF.initialize(F_); 
-      TrilinosWrappers::MPI::Vector vett;
-      TrilinosWrappers::MPI::Vector tmp;
-      for(unsigned int i=0;i<F->m();i++)
-        vett(i)= 1.0;
-      preconditionerF.vmult(tmp,vett);
-      exportvector(tmp,"vett.txt");
+      B = &B_;
+      B_T = &B_t;
 
-
-      FullMatrix<double> D(F->m(), F->n());
-      D.operator=(0);
-      for (size_t i = 0; i < F->m(); i++)
+      // Construct the inverse of the diagonal
+      TrilinosWrappers::MPI::Vector diagonal;
+      diagonal = 0.0;
+      for (size_t i = 0; i < F_.m(); ++i)
       {
-        D.set(i, i, - 1 / F->diag_element(i));
+        diagonal[i] = 1. / F_.diag_element(i);
+        // Save it also in the sparse matrix
+        D.set(i, i, F_.diag_element(i));
       }
 
-      FullMatrix<double> M(B->m(), D.n());
-      FullMatrix<double> M2(B->m(), B->n());
-      FullMatrix<double> B_full(B->m(), B->n());
-      FullMatrix<double> B_fullt(B->n(), B->m());
-      B_full.copy_from(*B);
+      // Create S_tilde
+      B_.mmult(S_tilde, B_t, diagonal);
 
-      std::cout << "prima\n";
-      B_full.mmult(M, D);
-      B_fullt.copy_transposed(B_full);
-      M.mmult(M2, B_fullt);
-
-      SparsityPattern sp;
-      sp.copy_from(M2);
-      S->reinit(sp);
-      // Copy values from FullMatrix to SparseMatrix
-      for (unsigned int i = 0; i < M2.m(); ++i)
-      {
-        for (unsigned int j = 0; j < M2.n(); ++j)
-        {
-          if (M2(i, j) != 0.0)
-          {
-            S->set(i, j, M2(i, j));            
-          }       
-        }
-        std::cout<<std::endl;
-      }
-
-      S->compress(VectorOperation::add);
-
-      exportmatrix(S,"output_S.txt");
-      exportmatrix(B,"output_B.txt");
-      
-      preconditionerS.initialize(*S);
+      preconditionerS.initialize(S_tilde);
+      preconditionerF.initialize(F_);
     }
     void
     vmult(TrilinosWrappers::MPI::BlockVector &dst,
           const TrilinosWrappers::MPI::BlockVector &src) const
     {
-      SparsityPattern sp(F->m(), F->n(), 1);
-      sp.compress();
-      TrilinosWrappers::SparseMatrix D;
-      D.reinit(sp);
-      for (size_t i = 0; i < F->m(); i++)
-      {
-        D.set(i, i, - F->diag_element(i));
-      }
+      const unsigned int maxiter = 100000;
+      const double tol = 1e-6;
+      SolverControl solver_control(maxiter, tol);
 
-      SolverControl solver_control_velocity(1000,
-                                            1e-2 * src.block(0).l2_norm());
-      SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres_velocity(
-          solver_control_velocity);
+      SolverGMRES<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-      solver_gmres_velocity.solve(*F,
-                                  dst.block(0),
-                                  src.block(0),
-                                  PreconditionIdentity());
-    
+      // Store temporary results
+      TrilinosWrappers::MPI::Vector y_u = src.block(0);
+      TrilinosWrappers::MPI::Vector y_p = src.block(1);
 
-      B->vmult(dst.block(1), dst.block(0));
-      dst.block(1).sadd(-1.0, src.block(1));
-      std::cout << "2\n";
+      TrilinosWrappers::MPI::Vector temp_2 = src.block(0);
 
-      tmp.reinit(src.block(1));
-      tmp2.reinit(src.block(0));
-      SolverControl solver_control2(1000,
-                                    1e-2 * dst.block(1).l2_norm());
-      SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres2(
-          solver_control2);
-      solver_gmres2.solve(*S,
-                          tmp,
-                          dst.block(1),
-                          PreconditionIdentity());
-      std::cout << "3\n";
+      // 1-st step
+      solver.solve(*F, y_u, src.block(0), preconditionerF);
 
-      D.vmult(tmp, dst.block(0));
-      dst.block(1).sadd(1 / alpha, dst.block(1));
-      std::cout << "4\n";
+      // 2-nd step
+      B->vmult(y_p, y_u);
+      y_p.sadd(-1, src.block(1));
 
-      B->transpose();
-      B->vmult(tmp2, dst.block(1));
-      tmp2.sadd(-1, tmp);
-      B->transpose();
-      std::cout << "5\n";
+      // 3-rd step
+      solver.solve(S_tilde, dst.block(1), y_p, preconditionerS);
 
-      solver_gmres_velocity.solve(D,
-                                  dst.block(0),
-                                  tmp2,
-                                  PreconditionIdentity());
-      std::cout << "fine\n";
+      // 4-th step
+      D.vmult(temp_2, y_u);
+      dst.block(1) *= -1. / alpha;
+
+      // 5-th step
+      B_T->vmult(y_u, dst.block(1));
+      temp_2 -= y_u;
+
+      // 6-th step
+      solver.solve(D, dst.block(0), temp_2, PreconditionIdentity());
     }
 
   protected:
-    TrilinosWrappers::SparseMatrix *B;
+    const double alpha = 1.;
+
     const TrilinosWrappers::SparseMatrix *F;
-    TrilinosWrappers::SparseMatrix *S;
+    const TrilinosWrappers::SparseMatrix *B_T;
+    const TrilinosWrappers::SparseMatrix *B;
+    TrilinosWrappers::SparseMatrix S_tilde;
+    TrilinosWrappers::SparseMatrix D;
 
     TrilinosWrappers::PreconditionILU preconditionerF;
     TrilinosWrappers::PreconditionILU preconditionerS;
-
-    mutable TrilinosWrappers::MPI::Vector tmp;
-    mutable TrilinosWrappers::MPI::Vector tmp2;
-    const double alpha = 0.5;
   };
 
-	class MyPreconditionSIMPLE
-	{
-		public:
-			void
-    	initialize(const TrilinosWrappers::SparseMatrix &F_,
-     	          const TrilinosWrappers::SparseMatrix &B_,
-								const TrilinosWrappers::SparseMatrix &B_t)
-    	{
-				F=&F_;
-				B=&B_;
-				B_T=&B_t;
-				//Construct the inverse of the diagonal
-				TrilinosWrappers::MPI::Vector diagonal;
-				diagonal=0.0;
-				for(size_t i=0;i<F_.m();++i){
-					diagonal[i]=1./F_.diag_element(i);
-					//Save it also in the sparse matrix
-					D_inv.set(i,i,1./F_.diag_element(i));
-				}
-				
-				//Create S_tilde
-				B_.mmult(S_tilde, B_t, diagonal);
+  class MyPreconditionSIMPLE
+  {
+  public:
+    void
+    initialize(const TrilinosWrappers::SparseMatrix &F_,
+               const TrilinosWrappers::SparseMatrix &B_,
+               const TrilinosWrappers::SparseMatrix &B_t)
+    {
+      F = &F_;
+      B = &B_;
+      B_T = &B_t;
+      // Construct the inverse of the diagonal
+      TrilinosWrappers::MPI::Vector diagonal;
+      diagonal = 0.0;
+      for (size_t i = 0; i < F_.m(); ++i)
+      {
+        diagonal[i] = 1. / F_.diag_element(i);
+        // Save it also in the sparse matrix
+        D_inv.set(i, i, 1. / F_.diag_element(i));
+      }
 
-			}
-    	void
-    	vmult(TrilinosWrappers::MPI::BlockVector &dst,
-          	const TrilinosWrappers::MPI::BlockVector &src) const
-    	{
-				const unsigned int maxiter=100000;
-				const double tol=1e-2*src.l2_norm();
-      	SolverControl solver_control(maxiter,tol);
-      	
-				SolverGMRES<TrilinosWrappers::MPI::Vector> solver(solver_control);
-      	
-				//Store in temporaries the results
-				TrilinosWrappers::MPI::Vector y_u=src.block(0);
-				TrilinosWrappers::MPI::Vector y_p=src.block(1);
+      // Create S_tilde
+      B_.mmult(S_tilde, B_t, diagonal);
+    }
+    void
+    vmult(TrilinosWrappers::MPI::BlockVector &dst,
+          const TrilinosWrappers::MPI::BlockVector &src) const
+    {
+      const unsigned int maxiter = 100000;
+      const double tol = 1e-2 * src.l2_norm();
+      SolverControl solver_control(maxiter, tol);
 
-				TrilinosWrappers::MPI::Vector temp_1=src.block(1);
-				
-				std::cout<<"Helo"<<std::endl;
+      SolverGMRES<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-				solver.solve(*F, y_u, src.block(0), PreconditionIdentity());
-				
-				std::cout<<"Helo 1 "<<solver_control.last_step()<<std::endl;
+      // Store in temporaries the results
+      TrilinosWrappers::MPI::Vector y_u = src.block(0);
+      TrilinosWrappers::MPI::Vector y_p = src.block(1);
 
-				B->vmult(temp_1,y_u);
-				temp_1-=src.block(1);
+      TrilinosWrappers::MPI::Vector temp_1 = src.block(1);
 
-				std::cout<<"Helo 2"<<std::endl;
-				
-				solver.solve(S_tilde, y_p, temp_1, PreconditionIdentity()); 
-				
-				std::cout<<"Helo 3 "<<solver_control.last_step()<<std::endl;
+      std::cout << "Helo" << std::endl;
 
-				dst.block(1)=y_p;
-				dst.block(1)*=1./alpha;
-				temp_1=dst.block(1);
+      solver.solve(*F, y_u, src.block(0), PreconditionIdentity());
 
-				B_T->vmult(temp_1,dst.block(1));
-				//Cannot be same vector
-				D_inv.vmult(dst.block(0),temp_1);
-				dst.block(0)-=y_u;
-				dst.block(0)*=-1.;
+      std::cout << "Helo 1 " << solver_control.last_step() << std::endl;
 
-				std::cout<<"Helo 4"<<std::endl;
-			
-			}
-		
-		protected:
+      B->vmult(temp_1, y_u);
+      temp_1 -= src.block(1);
 
-			const double alpha=0.5;
+      std::cout << "Helo 2" << std::endl;
 
-			const TrilinosWrappers::SparseMatrix* F;
-			const TrilinosWrappers::SparseMatrix* B_T;
-			const TrilinosWrappers::SparseMatrix* B;
-			TrilinosWrappers::SparseMatrix S_tilde;
-			TrilinosWrappers::SparseMatrix D_inv;
+      solver.solve(S_tilde, y_p, temp_1, PreconditionIdentity());
 
-	};
+      std::cout << "Helo 3 " << solver_control.last_step() << std::endl;
+
+      dst.block(1) = y_p;
+      dst.block(1) *= 1. / alpha;
+      temp_1 = dst.block(1);
+
+      B_T->vmult(temp_1, dst.block(1));
+      // Cannot be same vector
+      D_inv.vmult(dst.block(0), temp_1);
+      dst.block(0) -= y_u;
+      dst.block(0) *= -1.;
+
+      std::cout << "Helo 4" << std::endl;
+    }
+
+  protected:
+    const double alpha = 0.5;
+
+    const TrilinosWrappers::SparseMatrix *F;
+    const TrilinosWrappers::SparseMatrix *B_T;
+    const TrilinosWrappers::SparseMatrix *B;
+    TrilinosWrappers::SparseMatrix S_tilde;
+    TrilinosWrappers::SparseMatrix D_inv;
+  };
 
   // Constructor.
   NavierStokes(const std::string &mesh_file_name_,
@@ -619,7 +507,8 @@ public:
                const double &T_,
                const double &deltat_)
       : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)), mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)), pcout(std::cout, mpi_rank == 0), mesh_file_name(mesh_file_name_), degree_velocity(degree_velocity_), degree_pressure(degree_pressure_), T(T_), deltat(deltat_), mesh(MPI_COMM_WORLD)
-  {}
+  {
+  }
 
   // Setup system.
   void
@@ -630,11 +519,10 @@ public:
   solve();
 
   // Compute lift and drag.
-  void 
+  void
   compute_forces();
 
 protected:
-
   // Drag and lift.
   double drag;
   double lift;

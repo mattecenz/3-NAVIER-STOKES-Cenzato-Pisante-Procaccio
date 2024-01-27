@@ -155,21 +155,23 @@ public:
     virtual void
     vector_value(const Point<dim> &p, Vector<double> &values) const override
     {
-      values[0] = 4 * u_m * p[1] * (0.41 - p[1]) / (0.41 * 0.41) ;
+      values[0] = 4 * u_m * p[1] * (H - p[1]) * std::sin(M_PI*get_time()/8.) / (H * H) ;
       values[1] = 0.;
-    }
+    	values[2] = 0.;
+		}
 
     virtual double
     value(const Point<dim> &p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 4 * u_m * p[1] * (0.41 - p[1]) / (0.41 * 0.41) ;
+        return 4 * u_m * p[1] * (H - p[1]) / (H * H) ;
       else
         return 0;
     }
 
   protected:
-    double u_m = 400;
+		double H   = 0.41;
+    double u_m = 1.5;
   };
 
   // Since we're working with block matrices, we need to make our own
@@ -498,6 +500,9 @@ protected:
   void
   output(const unsigned int &time_step) const;
 
+	void 
+	compute_forces();
+
   // MPI parallel. /////////////////////////////////////////////////////////////
 
   // Number of MPI processes.
@@ -514,6 +519,9 @@ protected:
   // Kinematic viscosity [m2/s].
   const double nu = 1e-3;
 
+	// Density
+	const double rho = 1.;
+
   // Forcing term.
   ForcingTerm forcing_term;
 
@@ -522,6 +530,9 @@ protected:
 
   // Final time.
   const double T;
+
+	double drag;
+	double lift;
 
   // Discretization. ///////////////////////////////////////////////////////////
 

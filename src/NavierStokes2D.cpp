@@ -354,13 +354,22 @@ void NavierStokes::solve_time_step()
 
   SolverGMRES<TrilinosWrappers::MPI::BlockVector> solver(solver_control);
 
-  // PreconditionBlockIdentity preconditioner;
+  //PreconditionBlockIdentity preconditioner;
+
+	//PreconditionSIMPLE preconditioner;
 
   PreconditionaSIMPLE preconditioner;
-  pcout << " Assemblying the preconditioner... " << std::endl;
-  preconditioner.initialize(
+  
+	pcout << " Assemblying the preconditioner... " << std::endl;
+  
+	preconditioner.initialize(
       system_matrix.block(0, 0), system_matrix.block(1, 0), system_matrix.block(0, 1), solution_owned);
-  pcout << "done" << std::endl;
+  /*
+	preconditioner.initialize(
+      system_matrix.block(0, 0), system_matrix.block(1, 0), system_matrix.block(0, 1));
+	*/
+
+	pcout << "done" << std::endl;
   pcout << "===============================================" << std::endl;
 
   pcout << "Solving the linear system with expected maxiter: " << maxiter;
@@ -440,6 +449,119 @@ void NavierStokes::solve()
 
     assemble(time);
     solve_time_step();
-    output(time_step);
+    compute_forces();
+		output(time_step);
   }
+}
+
+void
+NavierStokes::compute_forces()
+{
+	pcout << "===============================================" << std::endl;
+  pcout << "Computing forces: ";
+
+	const unsigned int dofs_per_cell = fe->dofs_per_cell;
+  const unsigned int n_q           = quadrature->size();
+  const unsigned int n_q_face      = quadrature_boundary->size();
+
+  FEValues<dim>     fe_values(*fe,
+                          *quadrature,
+                          update_values | update_gradients |
+                            update_quadrature_points | update_JxW_values);
+  FEFaceValues<dim> fe_face_values(*fe,
+                                   *quadrature_boundary,
+                                   update_values | update_normal_vectors |
+                                     update_JxW_values);
+
+  FEValuesExtractors::Vector velocity(0);
+  FEValuesExtractors::Scalar pressure(dim);
+
+  drag = 0.0;
+  lift = 0.0;
+
+	std::vector<Tensor<1,dim>> current_velocity_values(n_q);
+ 	std::vector<double>   current_pressure_values(n_q);
+	std::vector<Tensor<2,dim>> current_velocity_gradients(n_q);
+
+	for (const auto &cell : dof_handler.active_cell_iterators())
+    {
+      if (!cell->is_locally_owned())
+        continue;
+
+      fe_values.reinit(cell);
+			
+			fe_values[velocity].get_function_values(solution,current_velocity_values);
+			fe_values[pressure].get_function_values(solution,current_pressure_values);
+			fe_values[velocity].get_function_gradients(solution,current_velocity_gradients);
+
+          if (cell->at_boundary())
+            {
+              for (unsigned int f = 0; f < cell->n_faces(); ++f)
+                {
+                  if (cell->face(f)->at_boundary() &&
+                     (cell->face(f)->boundary_id() == 5 ||
+                      cell->face(f)->boundary_id() == 6))
+                    {
+                      fe_face_values.reinit(cell, f);
+
+                      for (unsigned int q = 0; q < n_q_face; ++q)
+                        {
+													//Get the values
+													const double nx= fe_face_values.normal_vector(q)[0];
+													const double ny= fe_face_values.normal_vector(q)[1];
+													
+													//Construct the tensor
+													Tensor<1,dim> tangent;
+													tangent[0]= ny;
+													tangent[1]=-nx;
+
+                          drag += (rho * nu
+													*(//This is the tangential component 
+													current_velocity_values[q]
+													*tangent
+													/tangent.norm_square()
+													*tangent
+													)
+													*(	//This is the normal derivative
+													current_velocity_gradients[q] 
+                          *fe_face_values.normal_vector(q)
+													)
+													*ny
+													- 
+													current_pressure_values[q] * nx
+													)
+                          *fe_face_values.JxW(q);
+													;
+													
+													lift -= (rho * nu
+													*(//This is the tangential component 
+													current_velocity_values[q]
+													*tangent
+													/tangent.norm_square()
+													*tangent
+													)
+													*(	//This is the normal derivative
+													current_velocity_gradients[q] 
+                          *fe_face_values.normal_vector(q)
+													)
+													*nx
+													+ 
+													current_pressure_values[q] 
+													* ny
+													)
+                          *fe_face_values.JxW(q);
+													;
+
+													/*
+                          lift += current_velocity_values[q] * 
+                          fe_face_values.normal_vector(q) * ny *
+                          fe_face_values.JxW(q);
+													*/
+                        }
+                    }
+                }
+            }
+    }
+    pcout << "Drag: " << drag << " Lift: " << lift << std::endl; 
+	  pcout << "===============================================" << std::endl;
 }

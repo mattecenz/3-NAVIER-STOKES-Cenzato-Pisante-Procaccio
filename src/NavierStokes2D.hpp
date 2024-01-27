@@ -153,21 +153,23 @@ public:
     }
 
     virtual void
-    vector_value(const Point<dim> & /*p*/, Vector<double> &values) const override
+    vector_value(const Point<dim> &p, Vector<double> &values) const override
     {
-      values[0] = 1.;
+      values[0] = 4 * u_m * p[1] * (0.41 - p[1]) / (0.41 * 0.41) * std::sin(M_PI * get_time());
       values[1] = 0.;
-      values[2] = 0.;
     }
 
     virtual double
-    value(const Point<dim> & /*p*/, const unsigned int component = 0) const override
+    value(const Point<dim> &p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 1.;
+        return 4 * u_m * p[1] * (0.41 - p[1]) / (0.41 * 0.41) * std::sin(M_PI * get_time());
       else
         return 0;
     }
+
+  protected:
+    double u_m = 1.5;
   };
 
   // Since we're working with block matrices, we need to make our own
@@ -325,7 +327,7 @@ public:
     // Temporary vector.
     mutable TrilinosWrappers::MPI::Vector tmp;
   };
-  class MyPreconditionSIMPLE
+  class PreconditionSIMPLE
   {
   public:
     void
@@ -402,6 +404,68 @@ public:
     TrilinosWrappers::PreconditionILU preconditioner_S;
   };
 
+  class PreconditionaSIMPLE
+  {
+  public:
+    void
+    initialize(const TrilinosWrappers::SparseMatrix &F_,
+               const TrilinosWrappers::SparseMatrix &B_,
+               const TrilinosWrappers::SparseMatrix &B_t,
+               const TrilinosWrappers::MPI::BlockVector &sol_owned)
+    {
+      F = &F_;
+      B = &B_;
+      B_T = &B_t;
+
+      diag_D_inv.reinit(sol_owned.block(0));
+      diag_D.reinit(sol_owned.block(0));
+
+      for (unsigned int i : diag_D.locally_owned_elements())
+      {
+        double temp = F->diag_element(i);
+        diag_D[i] = -temp;
+        diag_D_inv[i] = 1.0 / temp;
+      }
+
+      B->mmult(S, *B_T, diag_D_inv);
+
+      preconditionerF.initialize(*F);
+      preconditionerS.initialize(S);
+    }
+    void
+    vmult(TrilinosWrappers::MPI::BlockVector &dst,
+          const TrilinosWrappers::MPI::BlockVector &src) const
+    {
+
+      tmp.reinit(src.block(1));
+      preconditionerF.vmult(dst.block(0), src.block(0));
+      dst.block(1) = src.block(1);
+      B->vmult(dst.block(1), dst.block(0));
+      dst.block(1).sadd(-1.0, src.block(1));
+      tmp = dst.block(1);
+      preconditionerS.vmult(dst.block(1), tmp);
+      dst.block(0).scale(diag_D);
+      dst.block(1) *= 1.0 / alpha;
+      B_T->vmult_add(dst.block(0), dst.block(1));
+      dst.block(0).scale(diag_D_inv);
+    }
+
+  protected:
+    const TrilinosWrappers::SparseMatrix *F;
+    const TrilinosWrappers::SparseMatrix *B_T;
+    const TrilinosWrappers::SparseMatrix *B;
+    TrilinosWrappers::SparseMatrix S;
+
+    TrilinosWrappers::PreconditionILU preconditionerF;
+    TrilinosWrappers::PreconditionILU preconditionerS;
+
+    TrilinosWrappers::MPI::Vector diag_D;
+    TrilinosWrappers::MPI::Vector diag_D_inv;
+    mutable TrilinosWrappers::MPI::Vector tmp;
+    mutable TrilinosWrappers::MPI::Vector tmp2;
+    const double alpha = 0.5;
+  };
+
   // Constructor.
   NavierStokes(const std::string &mesh_file_name_,
                const unsigned int &degree_velocity_,
@@ -424,7 +488,7 @@ protected:
   // Assemble system. We also assemble the pressure mass matrix (needed for the
   // preconditioner).
   void
-  assemble();
+  assemble(const double &time);
 
   // Solve the problem for one time step.
   void

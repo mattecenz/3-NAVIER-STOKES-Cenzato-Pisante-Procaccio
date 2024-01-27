@@ -73,35 +73,7 @@ public:
     const double g = 0.0;
   };
 
-  // Dirichlet boundary conditions.
-  class FunctionG : public Function<dim>
-  {
-  public:
-    // Constructor.
-    FunctionG() : Function<dim>(dim + 1)
-    {
-    }
-
-    // Evaluation.
-    virtual double
-    value(const Point<dim> & /*p*/, const unsigned int component = 0) const override
-    {
-      if (component == 3)
-        return 0.;
-      else
-        return 0.;
-    }
-
-    virtual void
-    vector_value(const Point<dim> & /*p*/, Vector<double> &values) const override
-    {
-      values[0] = 0.;
-      values[1] = 0.;
-      values[2] = 0.;
-      values[3] = 0.;
-    }
-  };
-
+  
   // Neumann boundary conditions.
   class FunctionH : public Function<dim>
   {
@@ -138,14 +110,14 @@ public:
     value(const Point<dim> & /*p*/, const unsigned int component = 0) const
     {
       if (component == 0)
-        return 0.05;
+        return 0.;
       else
         return 0.;
     }
     virtual void
     vector_value(const Point<dim> & /*p*/, Vector<double> &values) const override
     {
-      values[0] = 0.05;
+      values[0] = 0.;
       values[1] = 0.;
       values[2] = 0.;
     }
@@ -343,7 +315,7 @@ public:
     mutable TrilinosWrappers::MPI::Vector tmp;
   };
 
-  class PreconditionASIMPLE
+   class PreconditionSIMPLE
   {
   public:
     void
@@ -355,84 +327,6 @@ public:
       B = &B_;
       B_T = &B_t;
 
-      // Construct the inverse of the diagonal
-      TrilinosWrappers::MPI::Vector diagonal;
-      diagonal = 0.0;
-      for (size_t i = 0; i < F_.m(); ++i)
-      {
-        diagonal[i] = 1. / F_.diag_element(i);
-        // Save it also in the sparse matrix
-        D.set(i, i, F_.diag_element(i));
-      }
-
-      // Create S_tilde
-      B_.mmult(S_tilde, B_t, diagonal);
-
-      preconditionerS.initialize(S_tilde);
-      preconditionerF.initialize(F_);
-    }
-    void
-    vmult(TrilinosWrappers::MPI::BlockVector &dst,
-          const TrilinosWrappers::MPI::BlockVector &src) const
-    {
-      const unsigned int maxiter = 100000;
-      const double tol = 1e-6;
-      SolverControl solver_control(maxiter, tol);
-
-      SolverGMRES<TrilinosWrappers::MPI::Vector> solver(solver_control);
-
-      // Store temporary results
-      TrilinosWrappers::MPI::Vector y_u = src.block(0);
-      TrilinosWrappers::MPI::Vector y_p = src.block(1);
-
-      TrilinosWrappers::MPI::Vector temp_2 = src.block(0);
-
-      // 1-st step
-      solver.solve(*F, y_u, src.block(0), preconditionerF);
-
-      // 2-nd step
-      B->vmult(y_p, y_u);
-      y_p.sadd(-1, src.block(1));
-
-      // 3-rd step
-      solver.solve(S_tilde, dst.block(1), y_p, preconditionerS);
-
-      // 4-th step
-      D.vmult(temp_2, y_u);
-      dst.block(1) *= -1. / alpha;
-
-      // 5-th step
-      B_T->vmult(y_u, dst.block(1));
-      temp_2 -= y_u;
-
-      // 6-th step
-      solver.solve(D, dst.block(0), temp_2, PreconditionIdentity());
-    }
-
-  protected:
-    const double alpha = 1.;
-
-    const TrilinosWrappers::SparseMatrix *F;
-    const TrilinosWrappers::SparseMatrix *B_T;
-    const TrilinosWrappers::SparseMatrix *B;
-    TrilinosWrappers::SparseMatrix S_tilde;
-    TrilinosWrappers::SparseMatrix D;
-
-    TrilinosWrappers::PreconditionILU preconditionerF;
-    TrilinosWrappers::PreconditionILU preconditionerS;
-  };
-
-  class MyPreconditionSIMPLE
-  {
-  public:
-    void
-    initialize(const TrilinosWrappers::SparseMatrix &F_,
-               const TrilinosWrappers::SparseMatrix &B_,
-               const TrilinosWrappers::SparseMatrix &B_t)
-    {
-      F = &F_;
-      B = &B_;
-      B_T = &B_t;
       // Construct the inverse of the diagonal
       TrilinosWrappers::MPI::Vector diagonal;
       diagonal = 0.0;
@@ -445,16 +339,20 @@ public:
 
       // Create S_tilde
       B_.mmult(S_tilde, B_t, diagonal);
+
+      // Initialize the preconditioners
+      preconditioner_F.initialize(*F);
+      preconditioner_S.initialize(S_tilde);
     }
     void
     vmult(TrilinosWrappers::MPI::BlockVector &dst,
           const TrilinosWrappers::MPI::BlockVector &src) const
     {
-      const unsigned int maxiter = 100000;
-      const double tol = 1e-2 * src.l2_norm();
-      SolverControl solver_control(maxiter, tol);
+      const unsigned int maxiter = 10000;
+      const double tol = 1e-2;
+      SolverControl solver_F(maxiter, tol * src.block(0).l2_norm());
 
-      SolverGMRES<TrilinosWrappers::MPI::Vector> solver(solver_control);
+      SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres(solver_F);
 
       // Store in temporaries the results
       TrilinosWrappers::MPI::Vector y_u = src.block(0);
@@ -462,32 +360,24 @@ public:
 
       TrilinosWrappers::MPI::Vector temp_1 = src.block(1);
 
-      std::cout << "Helo" << std::endl;
-
-      solver.solve(*F, y_u, src.block(0), PreconditionIdentity());
-
-      std::cout << "Helo 1 " << solver_control.last_step() << std::endl;
+      solver_gmres.solve(*F, y_u, src.block(0), preconditioner_F);
 
       B->vmult(temp_1, y_u);
       temp_1 -= src.block(1);
 
-      std::cout << "Helo 2" << std::endl;
-
-      solver.solve(S_tilde, y_p, temp_1, PreconditionIdentity());
-
-      std::cout << "Helo 3 " << solver_control.last_step() << std::endl;
+      SolverControl solver_S(maxiter, tol * temp_1.l2_norm());
+      SolverCG<TrilinosWrappers::MPI::Vector> solver_cg(solver_S);
+      solver_cg.solve(S_tilde, y_p, temp_1, preconditioner_S);
 
       dst.block(1) = y_p;
       dst.block(1) *= 1. / alpha;
-      temp_1 = dst.block(1);
+      temp_1.reinit(dst.block(0));
 
       B_T->vmult(temp_1, dst.block(1));
       // Cannot be same vector
       D_inv.vmult(dst.block(0), temp_1);
       dst.block(0) -= y_u;
       dst.block(0) *= -1.;
-
-      std::cout << "Helo 4" << std::endl;
     }
 
   protected:
@@ -498,6 +388,70 @@ public:
     const TrilinosWrappers::SparseMatrix *B;
     TrilinosWrappers::SparseMatrix S_tilde;
     TrilinosWrappers::SparseMatrix D_inv;
+    TrilinosWrappers::PreconditionILU preconditioner_F;
+    TrilinosWrappers::PreconditionILU preconditioner_S;
+  };
+
+  class PreconditionaSIMPLE
+  {
+  public:
+    void
+    initialize(const TrilinosWrappers::SparseMatrix &F_,
+               const TrilinosWrappers::SparseMatrix &B_,
+               const TrilinosWrappers::SparseMatrix &B_t,
+               const TrilinosWrappers::MPI::BlockVector &sol_owned)
+    {
+      F = &F_;
+      B = &B_;
+      B_T = &B_t;
+
+      diag_D_inv.reinit(sol_owned.block(0));
+      diag_D.reinit(sol_owned.block(0));
+
+      for (unsigned int i : diag_D.locally_owned_elements())
+      {
+        double temp = F->diag_element(i);
+        diag_D[i] = -temp;
+        diag_D_inv[i] = 1.0 / temp;
+      }
+
+      B->mmult(S, *B_T, diag_D_inv);
+
+      preconditionerF.initialize(*F);
+      preconditionerS.initialize(S);
+    }
+    void
+    vmult(TrilinosWrappers::MPI::BlockVector &dst,
+          const TrilinosWrappers::MPI::BlockVector &src) const
+    {
+
+      tmp.reinit(src.block(1));
+      preconditionerF.vmult(dst.block(0), src.block(0));
+      dst.block(1) = src.block(1);
+      B->vmult(dst.block(1), dst.block(0));
+      dst.block(1).sadd(-1.0, src.block(1));
+      tmp = dst.block(1);
+      preconditionerS.vmult(dst.block(1), tmp);
+      dst.block(0).scale(diag_D);
+      dst.block(1) *= 1.0 / alpha;
+      B_T->vmult_add(dst.block(0), dst.block(1));
+      dst.block(0).scale(diag_D_inv);
+    }
+
+  protected:
+    const TrilinosWrappers::SparseMatrix *F;
+    const TrilinosWrappers::SparseMatrix *B_T;
+    const TrilinosWrappers::SparseMatrix *B;
+    TrilinosWrappers::SparseMatrix S;
+
+    TrilinosWrappers::PreconditionILU preconditionerF;
+    TrilinosWrappers::PreconditionILU preconditionerS;
+
+    TrilinosWrappers::MPI::Vector diag_D;
+    TrilinosWrappers::MPI::Vector diag_D_inv;
+    mutable TrilinosWrappers::MPI::Vector tmp;
+    mutable TrilinosWrappers::MPI::Vector tmp2;
+    const double alpha = 0.5;
   };
 
   // Constructor.
@@ -530,7 +484,7 @@ protected:
   // Assemble system. We also assemble the pressure mass matrix (needed for the
   // preconditioner).
   void
-  assemble();
+  assemble(const double time);
 
   // Solve the problem for one time step.
   void
@@ -582,8 +536,7 @@ protected:
   // TIme step.
   const double deltat;
 
-  // g(x).
-  FunctionG function_g;
+
 
   // h(x).
   FunctionH function_h;

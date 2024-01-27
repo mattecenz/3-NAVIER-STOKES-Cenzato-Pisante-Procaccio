@@ -169,7 +169,7 @@ public:
     }
 
   protected:
-    double u_m = 3;
+    double u_m = 400;
   };
 
   // Since we're working with block matrices, we need to make our own

@@ -155,7 +155,7 @@ public:
     virtual void
     vector_value(const Point<dim> &p, Vector<double> &values) const override
     {
-      values[0] = 4 * u_m * p[1] * (H - p[1]) * std::sin(M_PI*get_time()/8.) / (H * H) ;
+      values[0] = 4 * u_m * p[1] * (H - p[1]) /** std::sin(M_PI*get_time()/8.)*/ / (H * H) ;
       values[1] = 0.;
     	values[2] = 0.;
 		}
@@ -164,14 +164,14 @@ public:
     value(const Point<dim> &p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 4 * u_m * p[1] * (H - p[1]) / (H * H) ;
+        return 4 * u_m * p[1] * (H - p[1]) /**std::sin(M_PI*get_time()/8.)*/  / (H * H) ;
       else
         return 0;
     }
 
   protected:
 		double H   = 0.41;
-    double u_m = 1.5;
+    double u_m = 0.3;
   };
 
   // Since we're working with block matrices, we need to make our own

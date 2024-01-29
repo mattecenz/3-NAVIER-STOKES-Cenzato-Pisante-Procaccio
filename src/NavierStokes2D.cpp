@@ -458,7 +458,7 @@ void
 NavierStokes::compute_forces()
 {
 	pcout << "===============================================" << std::endl;
-  pcout << "Computing forces: ";
+  pcout << "Computing forces: " << std::endl;
 
 	const unsigned int dofs_per_cell = fe->dofs_per_cell;
   const unsigned int n_q           = quadrature->size();
@@ -516,15 +516,13 @@ NavierStokes::compute_forces()
 													tangent[1]=-nx;
 
                           drag += (rho * nu
+													*fe_face_values.normal_vector(q)
+													*current_velocity_gradients[q]
 													*(//This is the tangential component 
 													current_velocity_values[q]
 													*tangent
 													/tangent.norm_square()
 													*tangent
-													)
-													*(	//This is the normal derivative
-													current_velocity_gradients[q] 
-                          *fe_face_values.normal_vector(q)
 													)
 													*ny
 													- 
@@ -534,15 +532,13 @@ NavierStokes::compute_forces()
 													;
 													
 													lift -= (rho * nu
+													*fe_face_values.normal_vector(q)
+													*current_velocity_gradients[q] 
 													*(//This is the tangential component 
 													current_velocity_values[q]
 													*tangent
 													/tangent.norm_square()
 													*tangent
-													)
-													*(	//This is the normal derivative
-													current_velocity_gradients[q] 
-                          *fe_face_values.normal_vector(q)
 													)
 													*nx
 													+ 
@@ -562,6 +558,12 @@ NavierStokes::compute_forces()
                 }
             }
     }
-    pcout << "Drag: " << drag << " Lift: " << lift << std::endl; 
-	  pcout << "===============================================" << std::endl;
+    pcout << "Drag :\t " << drag << " Lift :\t " << lift << std::endl; 
+    //The mean velocity is defined as 2U(0,H/2,t)/3
+		//This is in the case 2D-2 unsteady
+		const double mean_vel=0.2;
+		pcout << "Coeff:\t " << (2.*drag)/(mean_vel*mean_vel*rho*0.1) 
+		      <<" Coeff:\t " << (2.*lift)/(mean_vel*mean_vel*rho*0.1) << std::endl; 
+	 
+	 pcout << "===============================================" << std::endl;
 }

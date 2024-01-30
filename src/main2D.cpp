@@ -11,8 +11,8 @@ int main(int argc, char *argv[])
   const unsigned int degree_velocity = 2;
   const unsigned int degree_pressure = 1;
 
-  const double T = 0.5;
-  const double deltat = 0.001;
+  const double T = 8;
+  const double deltat = 0.005;
 
   dealii::Timer timer;
   // Start the timer
@@ -40,11 +40,14 @@ int main(int argc, char *argv[])
       std::cerr << "Error opening output file" << std::endl;
       return -1;
     }
-    outputFile << "Iteration, Drag, Lift, Coeff Drag, CoeffLift" << std::endl;
+    outputFile << "Iteration, Drag, Lift, Coeff Drag, CoeffLift, time prec, time solve" << std::endl;
 
     for (size_t ite = 0; ite < problem.vec_drag.size(); ite++)
     {
-      outputFile << ite * deltat << ", " << problem.vec_drag[ite] << ", " << problem.vec_lift_coeff[ite] << ", " << problem.vec_drag_coeff[ite] << ", " << problem.vec_lift_coeff[ite] << std::endl;
+      outputFile << ite * deltat << ", " << problem.vec_drag[ite] << ", " << problem.vec_lift_coeff[ite] << ", " 
+                << problem.vec_drag_coeff[ite] << ", " << problem.vec_lift_coeff[ite] << ", "
+                << problem.time_prec[ite] << ", " << problem.time_solve[ite]
+                << std::endl;
     }
     outputFile.close();
   }

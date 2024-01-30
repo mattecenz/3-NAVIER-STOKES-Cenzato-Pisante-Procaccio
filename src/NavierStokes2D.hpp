@@ -158,7 +158,7 @@ public:
     virtual void
     vector_value(const Point<dim> &p, Vector<double> &values) const override
     {
-      values[0] = 4 * u_m * p[1] * (H - p[1]) /** std::sin(M_PI*get_time()/8.)*/ / (H * H);
+      values[0] = 4 * u_m * p[1] * (H - p[1]) * std::sin(M_PI*get_time()/8.) / (H * H);
       for (unsigned int i = 1; i < dim + 1; ++i)
         values[i] = 0.0;
     }
@@ -167,7 +167,7 @@ public:
     value(const Point<dim> &p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 4 * u_m * p[1] * (H - p[1]) /* *std::sin(M_PI*get_time()/8.)*/ / (H * H);
+        return 4 * u_m * p[1] * (H - p[1])  *std::sin(M_PI*get_time()/8.) / (H * H);
       else
         return 0;
     }
@@ -175,12 +175,12 @@ public:
     double getMeanVelocity() const
     {
 
-      return 8 * u_m * H / 2 * H / 2 /** std::sin(M_PI*get_time()/8.)*/ / (3.0 * H * H);
+      return 8 * u_m * H / 2 * H / 2 * std::sin(M_PI*get_time()/8.) / (3.0 * H * H);
     }
 
   protected:
     double H = 0.41;
-    double u_m = 0.3;
+    double u_m = 1.5;// 0.3;
   };
 
   // Since we're working with block matrices, we need to make our own
@@ -511,6 +511,9 @@ public:
   std::vector<double> vec_lift;
   std::vector<double> vec_drag_coeff;
   std::vector<double> vec_lift_coeff;
+
+  std::vector<double> time_prec;
+  std::vector<double> time_solve;
 
 protected:
   // Assemble system. We also assemble the pressure mass matrix (needed for the

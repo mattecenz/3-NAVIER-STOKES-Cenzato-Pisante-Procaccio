@@ -374,6 +374,8 @@ void NavierStokes::solve_time_step()
   timerprec.stop();
   pcout << "Time taken to initialize preconditioner: " << timerprec.wall_time() << " seconds" << std::endl;
 
+  time_prec.push_back(timerprec.wall_time());
+
   // pcout << "done" << std::endl;
   pcout << "===============================================" << std::endl;
 
@@ -387,6 +389,8 @@ void NavierStokes::solve_time_step()
 
   timersys.stop();
   pcout << "Time taken to solve Navier Stokes problem: " << timersys.wall_time() << " seconds" << std::endl;
+
+  time_solve.push_back(timersys.wall_time());
 
   pcout << "Result:  " << solver_control.last_step() << " GMRES iterations"
         << std::endl;

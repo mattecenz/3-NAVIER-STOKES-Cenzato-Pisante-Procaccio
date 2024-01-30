@@ -155,22 +155,28 @@ public:
     virtual void
     vector_value(const Point<dim> &p, Vector<double> &values) const override
     {
-      values[0] = 4 * u_m * p[1] * (H - p[1]) /** std::sin(M_PI*get_time()/8.)*/ / (H * H) ;
-      values[1] = 0.;
-    	values[2] = 0.;
-		}
+      values[0] = 4 * u_m * p[1] * (H - p[1]) /** std::sin(M_PI*get_time()/8.)*/ / (H * H);
+      for (unsigned int i = 1; i < dim + 1; ++i)
+        values[i] = 0.0;
+    }
 
     virtual double
     value(const Point<dim> &p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 4 * u_m * p[1] * (H - p[1]) /**std::sin(M_PI*get_time()/8.)*/  / (H * H) ;
+        return 4 * u_m * p[1] * (H - p[1]) /**std::sin(M_PI*get_time()/8.)*/ / (H * H);
       else
         return 0;
     }
 
+    double getMeanVelocity() const
+    {
+
+      return 8 * u_m * H / 2 * H / 2 /** std::sin(M_PI*get_time()/8.)*/ / (3.0 * H * H);
+    }
+
   protected:
-		double H   = 0.41;
+    double H = 0.41;
     double u_m = 0.3;
   };
 
@@ -500,8 +506,8 @@ protected:
   void
   output(const unsigned int &time_step) const;
 
-	void 
-	compute_forces();
+  void
+  compute_forces();
 
   // MPI parallel. /////////////////////////////////////////////////////////////
 
@@ -519,8 +525,8 @@ protected:
   // Kinematic viscosity [m2/s].
   const double nu = 1e-3;
 
-	// Density
-	const double rho = 1.;
+  // Density
+  const double rho = 1.;
 
   // Forcing term.
   ForcingTerm forcing_term;
@@ -531,8 +537,8 @@ protected:
   // Final time.
   const double T;
 
-	double drag;
-	double lift;
+  double drag;
+  double lift;
 
   // Discretization. ///////////////////////////////////////////////////////////
 

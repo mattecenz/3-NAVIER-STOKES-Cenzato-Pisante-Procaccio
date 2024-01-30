@@ -449,6 +449,7 @@ void NavierStokes::solve()
 
     assemble(time);
     solve_time_step();
+
     compute_forces();
     output(time_step);
   }
@@ -537,9 +538,9 @@ void NavierStokes::compute_forces()
   pcout << "Drag :\t " << drag << " Lift :\t " << lift << std::endl;
   // The mean velocity is defined as 2U(0,H/2,t)/3
   // This is in the case 2D-2 unsteady
-  const double mean_vel = 0.2;
-  pcout << "Coeff:\t " << (2. * drag) / (mean_vel * mean_vel * rho * 0.1)
-        << " Coeff:\t " << (2. * lift) / (mean_vel * mean_vel * rho * 0.1) << std::endl;
+  double mean_v = inlet_velocity.getMeanVelocity();
+  pcout << "Coeff:\t " << (2. * drag) / (mean_v * mean_v * rho * 0.1)
+        << " Coeff:\t " << (2. * lift) / (mean_v * mean_v * rho * 0.1) << std::endl;
 
   pcout << "===============================================" << std::endl;
 }

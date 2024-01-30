@@ -444,14 +444,14 @@ void NavierStokes::compute_forces()
   pcout << "Computing forces: " << std::endl;
 
   const unsigned int n_q = quadrature->size();
-  const unsigned int n_q_face = quadrature_boundary->size();
+  const unsigned int n_q_face = quadrature_face->size();
 
   FEValues<dim> fe_values(*fe,
                           *quadrature,
                           update_values | update_gradients |
                               update_quadrature_points | update_JxW_values);
   FEFaceValues<dim> fe_face_values(*fe,
-                                   *quadrature_boundary,
+                                   *quadrature_face,
                                    update_values | update_normal_vectors |
                                        update_JxW_values);
 
@@ -521,7 +521,7 @@ void NavierStokes::compute_forces()
   pcout << "Drag :\t " << drag << " Lift :\t " << lift << std::endl;
   // The mean velocity is defined as 2U(0,H/2,t)/3
   // This is in the case 2D-2 unsteady
-  const double mean_vel = 0.2;
+  double mean_v = inlet_velocity.getMeanVelocity();
   pcout << "Coeff:\t " << (2. * drag) / (mean_vel * mean_vel * rho * 0.1)
         << " Coeff:\t " << (2. * lift) / (mean_vel * mean_vel * rho * 0.1) << std::endl;
 

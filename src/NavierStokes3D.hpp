@@ -73,7 +73,6 @@ public:
     const double g = 0.0;
   };
 
-  
   // Neumann boundary conditions.
   class FunctionH : public Function<dim>
   {
@@ -140,7 +139,7 @@ public:
     virtual void
     vector_value(const Point<dim> & /*p*/, Vector<double> &values) const override
     {
-      values[0] = 1.;
+      values[0] = 4 * u_m * p[1] * (H - p[1]) /** std::sin(M_PI*get_time()/8.)*/ / (H * H);
 
       for (unsigned int i = 1; i < dim + 1; ++i)
         values[i] = 0.0;
@@ -150,13 +149,20 @@ public:
     value(const Point<dim> & /*p*/, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 1.;
+        return 4 * u_m * p[1] * (H - p[1]) /**std::sin(M_PI*get_time()/8.)*/ / (H * H);
       else
-        return 0.0;
+        return 0;
+    }
+
+    double getMeanVelocity() const
+    {
+
+      return 8 * u_m * H / 2 * H / 2 /** std::sin(M_PI*get_time()/8.)*/ / (3.0 * H * H);
     }
 
   protected:
-    const double alpha = 1.0;
+    double H = 0.41;
+    double u_m = 0.3;
   };
 
   // Since we're working with block matrices, we need to make our own
@@ -315,7 +321,7 @@ public:
     mutable TrilinosWrappers::MPI::Vector tmp;
   };
 
-   class PreconditionSIMPLE
+  class PreconditionSIMPLE
   {
   public:
     void
@@ -535,8 +541,6 @@ protected:
   const double T;
   // TIme step.
   const double deltat;
-
-
 
   // h(x).
   FunctionH function_h;

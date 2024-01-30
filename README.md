@@ -1,5 +1,5 @@
 # 3-NAVIER-STOKES-Cenzato-Pisante-Procaccio
-Project of the course Numerical Methods for Partial Differential Equations of Politecnico di Mliano
+Project of the course Numerical Methods for Partial Differential Equations of Politecnico di Milano.
 
 
 ### GENERAL INFORMATIONS

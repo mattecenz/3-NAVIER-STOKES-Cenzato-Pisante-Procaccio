@@ -362,19 +362,32 @@ void NavierStokes::solve_time_step()
 
   pcout << " Assemblying the preconditioner... " << std::endl;
 
+  dealii::Timer timerprec;
+  timerprec.restart();
+
   preconditioner.initialize(
       system_matrix.block(0, 0), system_matrix.block(1, 0), system_matrix.block(0, 1), solution_owned);
-  /*
-  preconditioner.initialize(
-      system_matrix.block(0, 0), system_matrix.block(1, 0), system_matrix.block(0, 1));
-  */
 
-  pcout << "done" << std::endl;
+  /*preconditioner.initialize(
+      system_matrix.block(0, 0), system_matrix.block(1, 0), system_matrix.block(0, 1));*/
+
+  timerprec.stop();
+  pcout << "Time taken to initialize preconditioner: " << timerprec.wall_time() << " seconds" << std::endl;
+
+  // pcout << "done" << std::endl;
   pcout << "===============================================" << std::endl;
 
   pcout << "Solving the linear system with expected maxiter: " << maxiter;
   pcout << " and tollerance: " << tol << std::endl;
+
+  dealii::Timer timersys;
+  timersys.restart();
+
   solver.solve(system_matrix, solution_owned, system_rhs, preconditioner);
+
+  timersys.stop();
+  pcout << "Time taken to solve Navier Stokes problem: " << timersys.wall_time() << " seconds" << std::endl;
+
   pcout << "Result:  " << solver_control.last_step() << " GMRES iterations"
         << std::endl;
 

@@ -14,10 +14,21 @@ int main(int argc, char *argv[])
   const double T = 0.5;
   const double deltat = 0.001;
 
+  dealii::Timer timer;
+  // Start the timer
+  timer.restart();
+
   NavierStokes problem(mesh_file_name, degree_velocity, degree_pressure, T, deltat);
 
   problem.setup();
   problem.solve();
+
+  // Stop the timer
+  timer.stop();
+
+  // Output the elapsed time
+  if(rank == 0)
+    std::cout << "Time taken to solve ENTIRE Navier Stokes problem: " << timer.wall_time() << " seconds" << std::endl;
 
   if (rank == 0)
   {

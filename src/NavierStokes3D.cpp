@@ -500,15 +500,11 @@ void NavierStokes::compute_forces()
             tangent[0] = ny;
             tangent[1] = -nx;
 
-            local_drag += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * ( // This is the tangential component
-                                                                                                            current_velocity_values[q] * tangent / tangent.norm_square() * tangent) *
-                               ny -
+            local_drag += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * (tangent / tangent.norm_square()) * ny -
                            current_pressure_values[q] * nx) *
                           fe_face_values.JxW(q);
 
-            local_lift -= (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * ( // This is the tangential component
-                                                                                                            current_velocity_values[q] * tangent / tangent.norm_square() * tangent) *
-                               nx +
+            local_lift += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * (tangent / tangent.norm_square()) * nx +
                            current_pressure_values[q] * ny) *
                           fe_face_values.JxW(q);
           }

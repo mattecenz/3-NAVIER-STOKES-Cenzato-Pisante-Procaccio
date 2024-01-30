@@ -16,8 +16,6 @@
 
 \maketitle
 
-\begin{document}
-
 \tableofcontents
 
 
@@ -31,11 +29,11 @@ The report will discuss the obtained results, the methods employed, their stabil
 
 \section*{Navier-Stokes Equations}
 
-The system of Navier-Stokes equations to be solved is given by:
+Considering the set $\Omega \in \mathbb{R}^d$ (d = 2,3), the system of Navier-Stokes equations to be solved is given by:
 
 \begin{equation}
 \begin{cases}
-\frac{\partial \mathbf{u}}{\partial t} + (\mathbf{u} \cdot \nabla)\mathbf{u} - \nu $\Delta$ \mathbf{u} + \nabla p &= \mathbf{f} \quad \text{in } \Omega, \\
+\frac{\partial \mathbf{u}}{\partial t} + (\mathbf{u} \cdot \nabla)\mathbf{u} - \nu \Delta \mathbf{u} + \nabla p &= \mathbf{f} \quad \text{in } \Omega , \\
 \nabla \cdot \mathbf{u} &= 0 \quad \text{in } \Omega, \\
 \mathbf{u} &= \mathbf{g} \quad \text{on } \Gamma_D \subset \partial \Omega, \\
 \nu \nabla \mathbf{u} \cdot \mathbf{n} - p &= \mathbf{h} \quad \text{on } \Gamma_N = \partial \Omega \setminus \Gamma_D, \\
@@ -43,16 +41,16 @@ The system of Navier-Stokes equations to be solved is given by:
 \end{cases}
 \end{equation}
 
-Here, \(\mathbf{u}\) represents the velocity vector field, \(p\) is the pressure, \(\nu\) is the kinematic viscosity, and \(\mathbf{f}\), \(\mathbf{g}\), and \(\mathbf{h}\) are given functions. The boundary conditions are applied on \(\Gamma_D\) and \(\Gamma_N\), and \(\mathbf{u}_0\) is the initial condition.
+Here, \(\mathbf{u}\) $\in \mathbb{R}^d$ represents the velocity vector field, \(p\) $\in \mathbb{R}$ is the pressure, \(\nu\) is the kinematic viscosity, and \(\mathbf{f}\), \(\mathbf{g}\), and \(\mathbf{h}\) are given functions. The boundary conditions are applied on \(\Gamma_D\) and \(\Gamma_N\), and \(\mathbf{u}_0\) is the initial condition.
 
 
 \section{Mathematical model}
+Let \( [H^1(\Omega)]^d = \{ v \in [H^1(\Omega)]^d \,|\, v = 0 \text{ on } \Gamma_D \} \), and let \( V \) denote the space \( [H^1_D(\Omega)]^d \), and \( Q \) the space \( L^2(\Omega) \). Then, multiplying by \( v \in V \) and integrating over \( \Omega \), and similarly for \( q \in Q \), we obtain the weak form as follows: find \( (u, p) \in V \times Q \) such that
 
-Let $H^1_D(\Omega) = \{ v \in H^1(\Omega) \,|\, v = 0 \text{ on } C_D \}$, and let $V$ denote the space $H^1_D(\Omega)^3$, and $Q$ the space $L^2(\Omega). Then, multiplying by $v \in V$ and integrating over \Omega, and similarly for $q \in Q$, we obtain the weak form as follows: find $(u, p) \in V \times Q$ such that
 \begin{equation}
 \left\{
 \begin{aligned}
-    &\int_\Omega \frac{\partial u}{\partial t} v \,d\Omega + \int_\Omega m \nabla u : \nabla v \,d\Omega + \int_\Omega \left((u \cdot \nabla)u \right) \cdot v \,d\Omega - \int_\Omega p \nabla \cdot v \,d\Omega \\
+    &\int_\Omega \frac{\partial u}{\partial t} v \,d\Omega + \int_\Omega \nu \nabla u : \nabla v \,d\Omega + \int_\Omega \left((u \cdot \nabla)u \right) \cdot v \,d\Omega - \int_\Omega p \nabla \cdot v \,d\Omega \\
     &= \int_\Omega f_{\text{ext}} v \,d\Omega + \int_{\partial X} g_N v \,ds \quad \forall v \in V, \\
     &\int_\Omega q \nabla \cdot u \,d\Omega = 0 \quad \forall q \in Q.
 \end{aligned}
@@ -61,35 +59,36 @@ Let $H^1_D(\Omega) = \{ v \in H^1(\Omega) \,|\, v = 0 \text{ on } C_D \}$, and l
 \end{equation}
 
 
-The weak form is discretized in time using a semi-implicit treatment of the nonlinear convective term, and the time derivative is discretized using a first-order finite difference. The problem is then discretized in space using stable finite elements. Let $\Omega_h$ be the space of finite elements defined by
+The weak form is discretized in time using a semi-implicit treatment of the nonlinear convective term, and the time derivative is discretized using a first-order finite difference. The problem is then discretized in space using stable finite elements. Let $X_h^r$ be the space of finite elements defined by
 \[
-\Omega_h = \{ v_h \in C^0(\Omega_h) \,|\, |v_h|_K \in P_r, \, \forall K \in \mathcal{T}_h \},
+X_h^r = \{ v_h \in C^0(\Omega_h) \,: \,v_h|_K \in P_r, \, \forall K \in \mathcal{T}_h \},
 \]
-where $P_r$ is the space of polynomials of degree less than or equal to $r$, and $\mathcal{T}_h$ is a regular triangulation forming an approximation $\Omega_h$ of $\Omega$. Then, the discrete spaces for velocity and pressure are denoted by $V_h = \Omega_h^3 \cap V$ and $Q_h = X_h \cap Q$ respectively. Let $u_{n,h} \in V_h$ and $p_{n,h} \in Q_h$ be approximations of the solutions $u$ and $p$ at time $t_n$. We denote by $u_1, \ldots, u_{N_u}$ the finite element basis of $V_h$ and by $\phi_1, \ldots, \phi_{N_p}$ the basis of $Q_h$. Then, we can write
+where \(P_r\) is the space of polynomials of degree less than or equal to \(r\), and \(\mathcal{T}_h\) is a regular triangulation forming an approximation \(\mathcal{X}_h^r\) of \(\Omega\). Then, the discrete spaces for velocity and pressure are denoted by \(V_h = [\mathcal{X}_h^r]^d \cap V\) and \(Q_h = \mathcal{X}_h^q \cap Q\) respectively. Let \(u_{n,h} \in V_h\) and \(p_{n,h} \in Q_h\) be approximations of the solutions \(u\) and \(p\) at time \(t_n\). We denote by \(\theta_1, \ldots, \theta_{N_u}\) the finite element basis of \(V_h\) and by \(\phi_1, \ldots, \phi_{N_p}\) the basis of \(Q_h\).
+
+Then, we can write
 \[
-u_{n,h}(x) = \sum_{i=1}^{N_u} u_{n,i} u_i(x), \quad p_{n,h}(x) = \sum_{i=1}^{N_p} p_{n,i} \phi_i(x).
+u_{n,h}(x) = \sum_{i=1}^{N_u} u_{n,i} \theta_i(x), \quad p_{n,h}(x) = \sum_{i=1}^{N_p} p_{n,i} \phi_i(x).
 \]
 
-We approximate $(u, p)$ at time $t_n$ by $u_{n,h}, p_{n,h} \in V_h \times Q_h$. Thanks to the Galerkin projection, we obtain the discrete system
+We approximate $(u, p)$ at time $t_n$ by $u_{n,h}, p_{n,h} \in V_h \times Q_h$. Thanks to the Galerkin projection and by taking \(v(x) = \theta_i \) and \(q = \phi_j \), we obtain the discrete system
 \begin{equation}
 \left\{
 \begin{aligned}
-    &\frac{1}{\Delta t} \int_{\Omega_h} u_{n+1,h} u_i \,dX + \int_{\Omega_h} \nabla u_{n+1,h} : \nabla u_i \,dX \\
-    &\quad+ \int_{\Omega_h} \left((u_{n,h} \cdot \nabla)u_{n+1,h} \right) \cdot u_i \,dX - \int_{\Omega_h} p_{n+1,h} \nabla \cdot u_i \,dX \\
-    &= \int_{\Omega_h} f_{\text{ext}}(t_{n+1}) u_i \,dX + \int_{\partial \Omega_h} g_N(t_{n+1}) u_i \,ds \quad \forall i = 1, \ldots, N_u, \\
-    &\int_{\Omega_h} q \nabla \cdot u_{n+1,h} \,dX = 0 \quad \forall q \in Q_h.
+    &\frac{1}{\Delta t} \int_{\Omega_h} u_h^{n+1} \theta_i \,dx + \int_{\Omega_h} \nabla u_h^{n+1} : \nabla \theta_i \,dx \\
+    &\quad+ \int_{\Omega_h} \left((u_h^{n} \cdot \nabla)u_h^{n+1} \right) \cdot \theta_i \,dx - \int_{\Omega_h} p_h^{n+1} \nabla \cdot \theta_i \,dx \\
+    &= \int_{\Omega_h} f_{\text{ext}}(t_{n+1}) \theta_i \,dx + \int_{\partial \Omega_h} g_N(t_{n+1}) \theta_i \,ds \quad \forall i = 1, \ldots, N_u, \\
+    &\int_{\Omega_h} \phi_j \nabla \cdot u_h^{n+1} \,dx = 0 \quad \forall j = 1, .... , N_p.
 \end{aligned}
 \right.
 \end{equation}
 
 At each time step, these equations can be rewritten as a linear system of the form \(Ax = b\) with:
 \[
-A = \begin{bmatrix} F & B^T \\ -B & 0 \end{bmatrix} x =\begin{bmatrix} u_{n+1} \\ p_{n+1} \end{bmatrix}  b=\begin{bmatrix} G \\ 0 \end{bmatrix}
+\begin{bmatrix} F & B^T \\ -B & 0 \end{bmatrix} x =  b
 \]
-with \( F = \frac{1}{\Delta t} M + A + C(U_n) \), where \( M \) is the fluid mass matrix, \( A \) is the stiffness matrix, and \( C(U_n) \) represents the linearized convection terms of the momentum equation. \( B \) and \( B^T \) are the discretized counterparts of the divergence operator and the gradient operator, respectively. \( U_{n+1} = (u_1, \ldots, u_{N_u})^T \) is the vector of velocity unknowns at time \( t = t_{n+1} \), and \( P_{n+1} = (p_1, \ldots, p_{N_p})^T \) is the vector of pressure unknowns.
+with \[x =\begin{bmatrix} U_{n+1} \\ P_{n+1} \end{bmatrix}, b=\begin{bmatrix} G \\ 0 \end{bmatrix},\]  \( F = \frac{1}{\Delta t} M + A + C(U_n) \), where \( M \) is the fluid mass matrix, \( A \) is the stiffness matrix, and \( C(U_n) \) represents the linearized convection terms of the momentum equation. \( B \) and \( B^T \) are the discretized counterparts of the divergence operator and the gradient operator, respectively. \( U_{n+1} = (u_1, \ldots, u_{N_u})^T \) is the vector of velocity unknowns at time \( t = t_{n+1} \), and \( P_{n+1} = (p_1, \ldots, p_{N_p})^T \) is the vector of pressure unknowns.
 
-\( G \) is a known vector depending on the discretized source force, \( U_n \), and on \( f \), \( g_D \), and \( g_N \). This setting serves as a simple yet representative scenario to test preconditioners for the Navier–Stokes equations. The considered discretization in time and space is adequate for testing various preconditioners with different benchmark problems. In particular, no stabilization techniques have been used in this work.
-
+\( G \) is a known vector depending on \( U_n \), \( f \), \( g_D \), and \( g_N \). This setting serves as a simple yet representative scenario to test preconditioners for the Navier–Stokes equations. The considered discretization in time and space is adequate for testing various preconditioners with different benchmark problems.
 
 
 \section{Objective}
@@ -202,7 +201,7 @@ where \(D\) represents the diagonal of matrix \(F\), and \(\alpha \in (0, 1]\) i
     \hat{S} = B D^{-1} B^T.
 \end{equation}
 
-The efficiency of SIMPLE is particularly notable when the problem matrix is diagonally dominant. Specifically, this holds true when the time step size \(\Delta t\) is sufficiently small. However, the efficiency diminishes as \(\Delta t\) increases. In such cases, the approximation \(eS\) becomes a suboptimal estimate of the exact Schur complement \(S\) within the approximation of the Schur complement.
+The efficiency of SIMPLE is particularly notable when the problem matrix is diagonally dominant. Specifically, this holds true when the time step size \(\Delta t\) is sufficiently small. However, the efficiency diminishes as \(\Delta t\) increases. In such cases, the approximation \(\Tilde{S}\) becomes a suboptimal estimate of the exact Schur complement \(S\).
 
 \subsubsection{aSIMPLE preconditioner}
 The approximate SIMPLE (aSIMPLE) preconditioner is derived from the factorization of the SIMPLE preconditioner. This method starts with the factorized form of the SIMPLE preconditioner and replaces the inverses of the algebraic operators with suitable approximations.
@@ -256,12 +255,9 @@ The code implements the time step solver for the Navier-Stokes equations using t
 
 The solution is updated for the next time step.
 
-\subsection{Forces Computation}
-
-\subsection{Parallelization}
 
 \section{Test Cases}
-\subsection{3D Test Cases}
+\subsection{2D Test Cases}
 \subsubsection{Test Case 2D-1 (Steady)}
 
 The inflow condition is given by:
@@ -286,9 +282,48 @@ U(0, y, t) = \frac{4U_m y (H - y) \sin\left(\frac{\pi t}{8}\right)}{H^2}, \quad 
 \]
 with \(U_m = 1.5 \, \text{m/s}\), and the time interval is \(0 \leq t \leq 8 \, \text{s}\). This gives a time-varying Reynolds number between \(0 \leq Re(t) \leq 100\). The initial data (\(t = 0\)) are \(U = V = P = 0\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\) as functions of time for \(0 \leq t \leq 8 \, \text{s}\), maximum drag coefficient \(c_{D_{\text{max}}}\), maximum lift coefficient \(c_{L_{\text{max}}}\), and pressure difference \(\Delta P(t)\) at \(t = 8 \, \text{s}\).
 
-\subsection{3D Test Cases}
 
-For the 3D test cases, the flows around a cylinder with a square cross-section is considered. The problem configuration is illustrated in figure \ref{fig:3D}. The boundary condition is defined to be 0 for both Dirichlet and Neumann, except for the inflow and the outflow. The characteristic velocity is \(U(t) = \frac{4U(0, H/2, H/2, t)}{9}\), and the Reynolds number is defined by \(Re = \frac{UD}{\nu}\). The drag and lift forces are
+\subsubsection*{Results}
+The experiments for this problem were carried out on a fine mesh using the aSIMPLE preconditioner. The following visualizations showcase the consistent and relatively lower time required for preconditioner initialization and the time taken to solve the system at each time step.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{timings.png}
+    \caption{Time taken to initialize the preconditioner and solve the system at each time step.}
+\end{figure}
+
+Moving on, the subsequent images illustrate the forces of drag and lift, along with their coefficients, observed over the course of time steps.
+
+\begin{figure}[h]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Drag.png}
+        \subcaption{Drag force}
+    \end{minipage}\hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Coeff_drag.png}
+        \subcaption{Drag coefficient}
+    \end{minipage}
+
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Lift.png}
+        \subcaption{Lift force}
+    \end{minipage}\hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{coeff_lift.png}
+        \subcaption{Lift coefficient}
+    \end{minipage}
+
+    \caption{Forces of drag and lift over time steps for different cases.}
+\end{figure}
+
+
+\subsection{3D Test Cases}
+For the 3D test cases, the flows around a cylinder with square and circular cross-sections are considered. The problem configurations and boundary conditions are illustrated in figure \ref{fig:3D}. The outflow condition can be selected by the user. Some definitions are introduced to specify the values that have to be computed. The height and width of the channel are \(H = 0.41 \, \text{m}\), and the side length and diameter of the cylinder are \(D = 0.1 \, \text{m}\). The characteristic velocity is \(U(t) = \frac{4U(0, H/2, H/2, t)}{9}\), and the Reynolds number is defined by \(Re = \frac{UD}{\nu}\). The drag and lift forces are
 \begin{align*}
     F_D &= \int_S \left(\rho\nu \frac{\partial v_t}{\partial n}n_y - p n_x\right) \, dS, \\
     F_L &= -\int_S \left(\rho\nu \frac{\partial v_t}{\partial n}n_x + P n_y\right) \, dS,
@@ -298,7 +333,9 @@ with the following notations: surface of the cylinder \(S\), normal vector \(n\)
     c_D &= \frac{2F_D}{\rho U^2 D H}, \\
     c_L &= \frac{2F_L}{\rho U^2 D H}.
 \end{align*}
+The Strouhal number is \(St = \frac{Df}{U}\) with the frequency of separation \(f\), and a pressure difference is defined by \(\Delta P = \Delta P(t) = P(x_a, y_a, z_a, t) - P(x_e, y_e, z_e, t)\) with coordinates \((x_a, y_a, z_a) = (0.45, 0.20, 0.205)\) and \((x_e, y_e, z_e) = (0.55, 0.20, 0.205)\).
 \subsubsection{Test Cases 3D-1Q and 3D-1Z (Steady)}
+
 
 The inflow condition is given by:
 \[
@@ -306,18 +343,29 @@ U(0, y, z) = \frac{16U_m yz (H - y)(H - z)}{H^4}, \quad V = W = 0
 \]
 with \(U_m = 0.45 \, \text{m/s}\), yielding the Reynolds number \(Re = 20\). 
 
-To solve this problem we used only the aSIMPLE preconditioner with \Delta \(t\)=0.05 in a time interval 0<=\(t\)<=8. 
+\subsubsection*{Results}
 
-We show for each time step the time taken to build the preconditioner, the time taken to solve the problem and both the drag and lift coefficients.
+To solve this problem, we exclusively used the aSIMPLE preconditioner with \(\Delta t = 0.05\) in a time interval \(0 \leq t \leq 8\).
 
-The parallel implementation used 5 physiscal cores, and the test is executed for both a coarse and a more fine mesh.
+For each time step, we present the time taken to construct the preconditioner, the time taken to solve the problem, and both the drag and lift coefficients. The parallel implementation utilized 5 physical cores, and the tests were conducted on both coarse and fine meshes.
 
-/*PICTURES OF RESULTS COARSE/FINE FOR BOTH PRECONDITIONER AND SOLVER (IN MILLIS) */
-/*PICTURES OF DRAG AND LIFT OVER TIME*/
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{results_coarse_fine_preconditioner_solver_times.png}
+    \caption{Results for both coarse and fine meshes, displaying preconditioner and solver times (in milliseconds).}
+\end{figure}
 
-As we can see the time taken to construct the preconditioner stays the same, while the time taken to solve the problem can vary a lot, also becoming much smaller then the preconditioner. This occurs because the problem is steady and the solution over time stabilizes and less iterations are required to solve the problem.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{results_drag_lift_over_time.png}
+    \caption{Drag and lift coefficients over time.}
+\end{figure}
 
-No major differences are found elsewhere, the drag and lift coefficients over time remain pretty much similar indipendently from the granularity of the problem.
+Observations indicate that the time required to build the preconditioner remains consistent, while the time to solve the problem varies significantly, sometimes even becoming smaller then the preconditioner. This variation can be attributed to the steady nature of the problem, where the solution stabilizes over time, necessitating fewer iterations for problem resolution.
+
+No substantial differences were observed elsewhere; the drag and lift coefficients over time remained relatively consistent regardless of the mesh granularity.
+
+
 
 \subsubsection{Test Cases 3D-2Q and 3D-2Z (Unsteady)}
 
@@ -325,8 +373,7 @@ The inflow condition is given by:
 \[
 U(0, y, z, t) = \frac{16U_m yz (H - y)(H - z)}{H^4}, \quad V = W = 0
 \]
-
-
+with \(U_m = 2.25 \, \text{m/s}\), yielding the Reynolds number \(Re = 100\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\) as functions of time for three periods \([t_0, t_0 + \frac{3}{f}]\) (with \(f = f(c_L)\)), maximum drag coefficient \(c_{D_{\text{max}}}\), maximum lift coefficient \(c_{L_{\text{max}}}\), and Strouhal number \(St\). The initial data (\(t = t_0\)) are arbitrary, however, for fully developed flow.
 
 \subsubsection{ Test Cases 3D-3Q and 3D-3Z (Unsteady)}
 
@@ -334,27 +381,41 @@ The inflow condition is given by:
 \[
 U(0, y, z, t) = \frac{16U_m yz (H - y)(H - z) \sin\left(\frac{\pi t}{8}\right)}{H^4}, \quad V = W = 0
 \]
+with \(U_m = 2.25 \, \text{m/s}\). The time interval is \(0 \leq t \leq 8 \, \text{s}\). This yields a time-varying Reynolds number between \(0 \leq Re(t) \leq 100\). The initial data (\(t = 0\)) are \(U = V = P = 0\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\) as functions of time for \(0 \leq t \leq 8 \, \text{s}\), maximum drag coefficient \(c_{D_{\text{max}}}\), maximum lift coefficient \(c_{L_{\text{max}}}\), and pressure difference \(\Delta P(t)\) for \(t = 8 \, \text{s}\).
+
+
+\section{Parallelization}
+
+\subsection*{Results}
+We conducted multiple runs of Test Case 2D-1 with \(T = 2\), \(\delta t = 0.01\) and the preconditioner aSIMPLE using different processor counts to assess the impact of parallelization on the code's performance. The results are as follows:
+
+\begin{itemize}
+    \item [\textbf{6 processors}]: The solution time is 76.4115 seconds, featuring an average preconditioner initialization time of 0.04 seconds and approximately 0.30 seconds for the initial time steps (around 15 GMRES iterations). Notably, the solution time significantly reduces towards the end. Without the preconditioner, the entire system requires about 149.708 seconds to solve. Notably, in the absence of the preconditioner, approximately 28979 iterations are performed in the initial steps, affirming the effectiveness of the preconditioner.
+
+    \item[\textbf{2 processors}]: In this configuration, the solution time is 160.326 seconds. During each time step, approximately 0.1 seconds are spent initializing the preconditioner, and an average of 0.4 seconds is required to solve the problem — still achieved in around 15 iterations.
+
+    \item[\textbf{1 processor}]: Operating the code in serial mode leads to a significant performance decrease, with the total time required to solve the system being 262.893 seconds. The initialization time for the preconditioner increases to around 0.135 seconds at every time step, and an average of 0.6 seconds is needed to solve the system.
+\end{itemize}
 
 
 
 
-\section{Results}
+\begin{thebibliography}{99}
+\bibitem{schafer1996}
+  Schäfer, S., Turek, F., Durst, F., Krause, E., and Rannacher, R.,
+  \emph{Benchmark Computations of Laminar Flow Around a Cylinder},
+  Vieweg+Teubner Verlag,
+  Wiesbaden,
+  1996.
 
-
-\section*{References}
-
-
-
-
-
-
-
-
-
-
+\bibitem{deparis2014}
+  Deparis, S., Grandperrin, G., and Quarteroni, A.,
+  \emph{Parallel Preconditioners for the Unsteady Navier–Stokes Equations and Applications to Hemodynamics Simulations},
+  Computers \& Fluids,
+  92:253–273,
+  2014.
+\end{thebibliography}
 
 
 
 \end{document}
-
-

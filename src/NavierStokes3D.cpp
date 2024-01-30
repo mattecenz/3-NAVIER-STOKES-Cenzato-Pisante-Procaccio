@@ -440,33 +440,33 @@ void NavierStokes::solve()
 
 void NavierStokes::compute_forces()
 {
-  const unsigned int dofs_per_cell = fe->dofs_per_cell;
+  pcout << "===============================================" << std::endl;
+  pcout << "Computing forces: " << std::endl;
+
   const unsigned int n_q = quadrature->size();
-  const unsigned int n_q_face = quadrature_face->size();
+  const unsigned int n_q_face = quadrature_boundary->size();
 
   FEValues<dim> fe_values(*fe,
                           *quadrature,
                           update_values | update_gradients |
                               update_quadrature_points | update_JxW_values);
   FEFaceValues<dim> fe_face_values(*fe,
-                                   *quadrature_face,
+                                   *quadrature_boundary,
                                    update_values | update_normal_vectors |
                                        update_JxW_values);
 
   FEValuesExtractors::Vector velocity(0);
   FEValuesExtractors::Scalar pressure(dim);
 
-  Tensor<1, dim> nx, ny;
-  for (unsigned int i = 0; i < dim; i++)
-  {
-    nx[i] = 0.;
-    ny[i] = 0.;
-  }
-  nx[0] = 1.;
-  ny[1] = 1.;
-
   drag = 0.0;
   lift = 0.0;
+
+  std::vector<Tensor<1, dim>> current_velocity_values(n_q);
+  std::vector<double> current_pressure_values(n_q);
+  std::vector<Tensor<2, dim>> current_velocity_gradients(n_q);
+
+  double local_lift = 0.0;
+  double local_drag = 0.0;
 
   for (const auto &cell : dof_handler.active_cell_iterators())
   {
@@ -475,34 +475,55 @@ void NavierStokes::compute_forces()
 
     fe_values.reinit(cell);
 
+    fe_values[velocity].get_function_values(solution, current_velocity_values);
+    fe_values[pressure].get_function_values(solution, current_pressure_values);
+    fe_values[velocity].get_function_gradients(solution, current_velocity_gradients);
+
     if (cell->at_boundary())
     {
       for (unsigned int f = 0; f < cell->n_faces(); ++f)
       {
         if (cell->face(f)->at_boundary() &&
-            (cell->face(f)->boundary_id() == 7 ||
-             cell->face(f)->boundary_id() == 8 ||
-             cell->face(f)->boundary_id() == 9 ||
-             cell->face(f)->boundary_id() == 10))
+            (cell->face(f)->boundary_id() == 5 ||
+             cell->face(f)->boundary_id() == 6))
         {
           fe_face_values.reinit(cell, f);
 
           for (unsigned int q = 0; q < n_q_face; ++q)
           {
-            drag += solution.block(1)(q) *
-                    scalar_product(fe_face_values.normal_vector(q), nx) *
-                    fe_face_values.JxW(q);
+            // Get the values
+            const double nx = fe_face_values.normal_vector(q)[0];
+            const double ny = fe_face_values.normal_vector(q)[1];
 
-            //
-            // drag += rho * nu * tangent_vector(q) * solution.block(0)(q);
+            // Construct the tensor
+            Tensor<1, dim> tangent;
+            tangent[0] = ny;
+            tangent[1] = -nx;
 
-            lift += solution.block(1)(q) *
-                    scalar_product(fe_face_values.normal_vector(q), ny) *
-                    fe_face_values.JxW(q);
+            local_drag += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * ( // This is the tangential component
+                                                                                                            current_velocity_values[q] * tangent / tangent.norm_square() * tangent) *
+                               ny -
+                           current_pressure_values[q] * nx) *
+                          fe_face_values.JxW(q);
+
+            local_lift -= (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * ( // This is the tangential component
+                                                                                                            current_velocity_values[q] * tangent / tangent.norm_square() * tangent) *
+                               nx +
+                           current_pressure_values[q] * ny) *
+                          fe_face_values.JxW(q);
           }
         }
       }
     }
   }
-  pcout << drag << " " << lift << std::endl;
+  drag = Utilities::MPI::sum(local_drag, MPI_COMM_WORLD);
+  lift = Utilities::MPI::sum(local_lift, MPI_COMM_WORLD);
+  pcout << "Drag :\t " << drag << " Lift :\t " << lift << std::endl;
+  // The mean velocity is defined as 2U(0,H/2,t)/3
+  // This is in the case 2D-2 unsteady
+  const double mean_vel = 0.2;
+  pcout << "Coeff:\t " << (2. * drag) / (mean_vel * mean_vel * rho * 0.1)
+        << " Coeff:\t " << (2. * lift) / (mean_vel * mean_vel * rho * 0.1) << std::endl;
+
+  pcout << "===============================================" << std::endl;
 }

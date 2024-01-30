@@ -288,7 +288,7 @@ with \(U_m = 1.5 \, \text{m/s}\), and the time interval is \(0 \leq t \leq 8 \, 
 
 \subsection{3D Test Cases}
 
-For the 3D test cases, the flows around a cylinder with square and circular cross-sections are considered. The problem configurations and boundary conditions are illustrated in figure \ref{fig:3D}. The outflow condition can be selected by the user. Some definitions are introduced to specify the values that have to be computed. The height and width of the channel are \(H = 0.41 \, \text{m}\), and the side length and diameter of the cylinder are \(D = 0.1 \, \text{m}\). The characteristic velocity is \(U(t) = \frac{4U(0, H/2, H/2, t)}{9}\), and the Reynolds number is defined by \(Re = \frac{UD}{\nu}\). The drag and lift forces are
+For the 3D test cases, the flows around a cylinder with a square cross-section is considered. The problem configuration is illustrated in figure \ref{fig:3D}. The boundary condition is defined to be 0 for both Dirichlet and Neumann, except for the inflow and the outflow. The characteristic velocity is \(U(t) = \frac{4U(0, H/2, H/2, t)}{9}\), and the Reynolds number is defined by \(Re = \frac{UD}{\nu}\). The drag and lift forces are
 \begin{align*}
     F_D &= \int_S \left(\rho\nu \frac{\partial v_t}{\partial n}n_y - p n_x\right) \, dS, \\
     F_L &= -\int_S \left(\rho\nu \frac{\partial v_t}{\partial n}n_x + P n_y\right) \, dS,
@@ -298,14 +298,26 @@ with the following notations: surface of the cylinder \(S\), normal vector \(n\)
     c_D &= \frac{2F_D}{\rho U^2 D H}, \\
     c_L &= \frac{2F_L}{\rho U^2 D H}.
 \end{align*}
-The Strouhal number is \(St = \frac{Df}{U}\) with the frequency of separation \(f\), and a pressure difference is defined by \(\Delta P = \Delta P(t) = P(x_a, y_a, z_a, t) - P(x_e, y_e, z_e, t)\) with coordinates \((x_a, y_a, z_a) = (0.45, 0.20, 0.205)\) and \((x_e, y_e, z_e) = (0.55, 0.20, 0.205)\).
 \subsubsection{Test Cases 3D-1Q and 3D-1Z (Steady)}
 
 The inflow condition is given by:
 \[
 U(0, y, z) = \frac{16U_m yz (H - y)(H - z)}{H^4}, \quad V = W = 0
 \]
-with \(U_m = 0.45 \, \text{m/s}\), yielding the Reynolds number \(Re = 20\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\).
+with \(U_m = 0.45 \, \text{m/s}\), yielding the Reynolds number \(Re = 20\). 
+
+To solve this problem we used only the aSIMPLE preconditioner with \Delta \(t\)=0.05 in a time interval 0<=\(t\)<=8. 
+
+We show for each time step the time taken to build the preconditioner, the time taken to solve the problem and both the drag and lift coefficients.
+
+The parallel implementation used 5 physiscal cores, and the test is executed for both a coarse and a more fine mesh.
+
+/*PICTURES OF RESULTS COARSE/FINE FOR BOTH PRECONDITIONER AND SOLVER (IN MILLIS) */
+/*PICTURES OF DRAG AND LIFT OVER TIME*/
+
+As we can see the time taken to construct the preconditioner stays the same, while the time taken to solve the problem can vary a lot, also becoming much smaller then the preconditioner. This occurs because the problem is steady and the solution over time stabilizes and less iterations are required to solve the problem.
+
+No major differences are found elsewhere, the drag and lift coefficients over time remain pretty much similar indipendently from the granularity of the problem.
 
 \subsubsection{Test Cases 3D-2Q and 3D-2Z (Unsteady)}
 
@@ -313,7 +325,8 @@ The inflow condition is given by:
 \[
 U(0, y, z, t) = \frac{16U_m yz (H - y)(H - z)}{H^4}, \quad V = W = 0
 \]
-with \(U_m = 2.25 \, \text{m/s}\), yielding the Reynolds number \(Re = 100\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\) as functions of time for three periods \([t_0, t_0 + \frac{3}{f}]\) (with \(f = f(c_L)\)), maximum drag coefficient \(c_{D_{\text{max}}}\), maximum lift coefficient \(c_{L_{\text{max}}}\), and Strouhal number \(St\). The initial data (\(t = t_0\)) are arbitrary, however, for fully developed flow.
+
+
 
 \subsubsection{ Test Cases 3D-3Q and 3D-3Z (Unsteady)}
 
@@ -321,7 +334,8 @@ The inflow condition is given by:
 \[
 U(0, y, z, t) = \frac{16U_m yz (H - y)(H - z) \sin\left(\frac{\pi t}{8}\right)}{H^4}, \quad V = W = 0
 \]
-with \(U_m = 2.25 \, \text{m/s}\). The time interval is \(0 \leq t \leq 8 \, \text{s}\). This yields a time-varying Reynolds number between \(0 \leq Re(t) \leq 100\). The initial data (\(t = 0\)) are \(U = V = P = 0\). The following quantities should be computed: drag coefficient \(c_D\), lift coefficient \(c_L\), and pressure difference \(\Delta P\) as functions of time for \(0 \leq t \leq 8 \, \text{s}\), maximum drag coefficient \(c_{D_{\text{max}}}\), maximum lift coefficient \(c_{L_{\text{max}}}\), and pressure difference \(\Delta P(t)\) for \(t = 8 \, \text{s}\).
+
+
 
 
 \section{Results}

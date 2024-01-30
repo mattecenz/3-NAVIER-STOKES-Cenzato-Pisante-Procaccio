@@ -164,7 +164,7 @@ public:
     value(const Point<dim> &p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 4 * u_m * p[1] * (H - p[1]) /**std::sin(M_PI*get_time()/8.)*/ / (H * H);
+        return 4 * u_m * p[1] * (H - p[1]) /* *std::sin(M_PI*get_time()/8.)*/ / (H * H);
       else
         return 0;
     }

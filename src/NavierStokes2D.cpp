@@ -517,11 +517,11 @@ void NavierStokes::compute_forces()
             tangent[0] = ny;
             tangent[1] = -nx;
 
-            local_drag += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * (tangent / tangent.norm_square()) * ny -
+            local_drag += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * tangent * ny -
                            current_pressure_values[q] * nx) *
                           fe_face_values.JxW(q);
 
-            local_lift += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * (tangent / tangent.norm_square()) * nx +
+            local_lift += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * tangent * nx +
                            current_pressure_values[q] * ny) *
                           fe_face_values.JxW(q);
           }
@@ -535,8 +535,14 @@ void NavierStokes::compute_forces()
   // The mean velocity is defined as 2U(0,H/2,t)/3
   // This is in the case 2D-2 unsteady
   double mean_v = inlet_velocity.getMeanVelocity();
-  pcout << "Coeff:\t " << (2. * drag) / (mean_v * mean_v * rho * M_PI * 0.1)
-        << " Coeff:\t " << (2. * lift) / (mean_v * mean_v * rho * M_PI * 0.1) << std::endl;
+  vec_drag.push_back(drag);
+  vec_lift.push_back(lift);
+  vec_drag_coeff.push_back((2. * drag) / (mean_v * mean_v * rho * M_PI * 0.1));
+  vec_lift_coeff.push_back((2. * lift) / (mean_v * mean_v * rho * M_PI * 0.1));
+
+  pcout
+      << "Coeff:\t " << (2. * drag) / (mean_v * mean_v * rho * M_PI * 0.1)
+      << " Coeff:\t " << (2. * lift) / (mean_v * mean_v * rho * M_PI * 0.1) << std::endl;
 
   pcout << "===============================================" << std::endl;
 }

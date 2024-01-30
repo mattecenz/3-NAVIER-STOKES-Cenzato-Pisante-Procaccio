@@ -31,6 +31,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 using namespace dealii;
 
@@ -491,6 +492,12 @@ public:
   // Solve system.
   void
   solve();
+
+  std::vector<double> vec_drag;
+  std::vector<double> vec_lift;
+  std::vector<double> vec_drag_coeff;
+  std::vector<double> vec_lift_coeff;
+
 
 protected:
   // Assemble system. We also assemble the pressure mass matrix (needed for the

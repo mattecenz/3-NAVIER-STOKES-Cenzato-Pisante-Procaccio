@@ -7,21 +7,30 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{float}
+\usepackage{hyperref}
 
 \title{Solving the Navier-Stokes Equations: A Finite Element Approach}
 \author{Cenzato, Pisante, Procaccio}
 \date{\today}
 
 \begin{document}
-
 \maketitle
 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.4\linewidth]{20151029123608!Logo_Politecnico_Milano.png}
+    \label{fig:enter-label}
+\end{figure}
+
+
+
+\newpage
 \tableofcontents
 
 
 \section*{Introduction}
 
-This report aims to solve the unsteady, incompressible Navier-Stokes equations using the finite element method. The focus is on simulating the benchmark problem "flow past a cylinder" in two or three dimensions considering different values of the Reynolds number (\(Re \leq 200\)).
+This report aims to solve the unsteady, incompressible Navier-Stokes equations using the finite element method. The focus is to simulate the benchmark problem "flow past a cylinder" in two and three dimensions considering different values of the Reynolds number (\(Re \leq 200\)).
 
 
 
@@ -41,7 +50,7 @@ Considering the set $\Omega \in \mathbb{R}^d$ (d = 2,3), the system of Navier-St
 \end{cases}
 \end{equation}
 
-Here, \(\mathbf{u}\) $\in \mathbb{R}^d$ represents the velocity vector field, \(p\) $\in \mathbb{R}$ is the pressure, \(\nu\) is the kinematic viscosity, and \(\mathbf{f}\), \(\mathbf{g}\), and \(\mathbf{h}\) are given functions. The boundary conditions are applied on \(\Gamma_D\) and \(\Gamma_N\), and \(\mathbf{u}_0\) is the initial condition.
+In this report, \(\mathbf{u}\) $\in \mathbb{R}^d$ will refer to the velocity vector field, \(p\) $\in \mathbb{R}$ to the pressure, \(\nu\) to the kinematic viscosity, and \(\mathbf{f}\), \(\mathbf{g}\), and \(\mathbf{h}\) are given functions. The boundary conditions are applied on \(\Gamma_D\) and \(\Gamma_N\), and \(\mathbf{u}_0\) is the initial condition.
 
 
 \section{Mathematical model}
@@ -313,28 +322,19 @@ U(0, y) = \frac{4U_m y (H - y)}{H^2}, \quad V = 0
 with \(U_m = 0.3 \, \text{m/s}\), yielding the Reynolds number \(Re = 20\). 
 
 The problem is solved in a period T=8s and a deltat between each time step of deltat=0.001. 
-Pressure and velocity field over the fine mesh is shown in figure~\ref{fig:Velocity_pressure_2D_test1}.
-In addition, drag coefficient \(c_D\) and lift coefficient \(c_L\) are computed at each time step. In particular, the inlet velocity is kept constant throughout the whole period (0,T) and the initial velocity is null over the whole domain. For this reason, after a transitioning period in which the fluid accelerates, the values of the two coefficient tend to stabilyze around 1.0s at the values shown in figure~\ref{fig:Cd_Cl_2D_test1}.
+Pressure and velocity field over the fine mesh is shown in figure~\ref{fig:v_steady}.
 
-\begin{figure}
-\centering
- \subfloat[Drag coefficient]{\includegraphics[width=0.5\textwidth]{Cd_test1.jpg.png}\label{fig:Cd_2D_test1}}
-    \hfill
-    \subfloat[Lift coefficient]{\includegraphics[width=0.5\textwidth]{CL_test1.jpg}\label{fig:Cl_2D_test2}}
-    
-\caption{CL and CD for 2D test case 1}
-    \label{fig:Cd_Cl_2D_test1}
-\end{figure}
-
-Visually, below are the images relative to the velocity and pressure fields \ref{fig:v_steady}.
 \begin{figure}
     \centering    
-    \subfloat[Velocity at time t=0.001s]{\includegraphics[width=0.5\textwidth]{testcase11111.png}\label{fig:v_steady}}
+    \subfloat[Velocity field]{\includegraphics[width=0.5\textwidth]{testcase11111.png}\label{fig:v_steady}}
     \hfill
-    \subfloat[Pressure at time t=0.001s]{\includegraphics[width=0.5\textwidth]{pressure_testcase11111.png}\label{fig:sub2}}
-    
-    \vspace{1em} % Spacing between the rows of images
+    \subfloat[Pressure field]{\includegraphics[width=0.5\textwidth]{pressure_testcase11111.png}\label{fig:sub2}}
+    \caption{Velocity and pressure field}
 \end{figure}
+
+As we can see from such images, velocity increases once flowing around the bluff body, thus keeping the mass flow rate constant. In addition, the pressure decreases along the \(x\)-axis, accordingly with the energy dissipation due to viscous stresses.
+\vspace{1em} % Spacing between the rows of images
+
 
 \subsubsection{Test Case 2D-2 (Unsteady)}
     The inflow condition is given by:
@@ -343,14 +343,14 @@ Visually, below are the images relative to the velocity and pressure fields \ref
     \]
     with \(U_m = 1.5 \, \text{m/s}\), yielding the Reynolds number \(Re = 100\). 
     Pressure and velocity field over the fine mesh is shown in figure~\ref{fig:Velocity_pressure_2D_test2}.
-In addition, drag coefficient \(c_D\) and lift coefficient \(c_L\) are computed at each time step. In particular, the inlet velocity is kept constant throughout the whole period (0,T) and the initial velocity is null over the whole domain. The value of the lift coefficient tend to decrease over time, resulting in a non stationarity of the test as shown in figure~\ref{fig:Cd_Cl_2D_test2}.
+In addition, drag coefficient \(c_D\) and lift coefficient \(c_L\) are computed at each time step. In particular, the inlet velocity is kept constant throughout the whole period (0,T) and the initial velocity is null over the whole domain. The value of the lift coefficient tend to decrease over time, resulting in a non-stationarity of the test as shown in figure~\ref{fig:Cd_Cl_2D_test2}.
 \begin{figure}
     \centering
-     \subfloat[Drag coefficient]{\includegraphics[width=0.5\textwidth]{Cd_test2.jpg.png}\label{fig:Cd_2D_test2}}
+    \subfloat[Drag coefficient]{\includegraphics[width=0.5\textwidth]{Cd_test2.png}\label{fig:Cd_2D_test2}}
     \hfill
-    \subfloat[Lift coefficient]{\includegraphics[width=0.5\textwidth]{cl_test2.jpg.png}\label{fig:Cl_2D_test2}}
-\caption{CL and CD for 2D test case 2}
-    \label{fig:Cd_Cl_2D_test2}
+    \subfloat[Lift coefficient]{\includegraphics[width=0.5\textwidth]{cl_test2.png}\label{fig:Cl_2D_test2}}
+    \caption{CD and CL - test 2 case}
+    \label{fig:general_label}
 \end{figure}
 Velocity and pressure transition over time are shown in the groups of figures~\ref{fig:P_V_test2} below:
 
@@ -383,8 +383,6 @@ Velocity and pressure transition over time are shown in the groups of figures~\r
     \subfloat[Velocity at time t=0.6s]{\includegraphics[width=0.5\textwidth]{velocity_2D_test2_ts600.png}\label{fig:sub3}}
     \hfill
     \subfloat[Pressure at time t=0.6s]{\includegraphics[width=0.5\textwidth]{pressure_2D_test2_ts600.png}\label{fig:sub2}}
-    
-    \caption{Your caption here}
 \end{figure}
 
     \vspace{1em} % Spacing between the rows of images
@@ -420,8 +418,8 @@ Velocity and pressure transition over time are shown in the groups of figures~\r
     \label{fig:P_V_test2}
 \end{figure}
 
-This sequence of images shows the reason why this test cannot be considered stationary: the static initial condition combined with a high Reynolds number \(Re\) implies a strong effect of the time derivative \frac{\partial u}{\partial t} on the system_matrix.
-Notably, the symmetry of the inlet velocity, bluff body and boundary condition implies almost symmetric velocity and pressure fields with respect to the \(x\)-axis.
+This sequence of images shows the reason why this test cannot be considered stationary: the static initial condition combined with a high Reynolds number \(Re\) implies a strong effect of the time derivative \(\frac{\partial u}{\partial t}\) on the system matrix. Notably, the symmetry of the inlet velocity, bluff body, and boundary condition implies almost symmetric velocity and pressure fields with respect to the \(x\)-axis, implying a very small lift coefficient.
+
     
 \subsubsection{Test Case 2D-3 (Unsteady)}
 
@@ -488,26 +486,32 @@ Finally, Velocity and pressure transition over time are shown in the groups of f
     
     \vspace{1em} % Spacing between the rows of images
 
-    \subfloat[Velocity at time t=2.0s]{\includegraphics[width=0.5\textwidth]{vtime400.png}\label{fig:sub3}}
+    \subfloat[Velocity at time \(t=2.0s\)]{\includegraphics[width=0.5\textwidth]{vtime400.png}\label{fig:sub3}}
     \hfill
-    \subfloat[Pressure at time t=2.0s]{\includegraphics[width=0.5\textwidth]{ptime400.png}\label{fig:sub2}}
-    
-    
-    \caption{Your caption here}
+    \subfloat[Pressure at time \(t=2.0s\)]{\includegraphics[width=0.5\textwidth]{ptime400.png}\label{fig:sub2}}
+
+    \subfloat[Velocity at time t=2.5s]{\includegraphics[width=0.5\textwidth]{vtime500.png}\label{fig:sub3}}
+    \hfill
+    \subfloat[pressure at time t=2.5s]{\includegraphics[width=0.5\textwidth]{ptime500.png}\label{fig:sub2}}
+    \vspace{1em} % Spacing between the rows of images
+    \caption{Velocity and pressure field with accelerating fluid}
+    \label{fig:general_label}
 \end{figure}
 
     \vspace{1em} % Spacing between the rows of images
 \begin{figure}
 \centering
-    \subfloat[Velocity at time t=2.5s]{\includegraphics[width=0.5\textwidth]{vtime500.png}\label{fig:sub3}}
-    \hfill
-    \subfloat[pressure at time t=2.5s]{\includegraphics[width=0.5\textwidth]{ptime500.png}\label{fig:sub2}}
-
-    \vspace{1em} % Spacing between the rows of images
+\vspace{1em} % Spacing between the rows of images
 
     \subfloat[Velocity at time t=3.0s]{\includegraphics[width=0.5\textwidth]{vtime600.png}\label{fig:sub3}}
     \hfill
     \subfloat[pressure at time t=3.0s]{\includegraphics[width=0.5\textwidth]{ptime600.png}\label{fig:sub2}}
+    
+    \subfloat[Velocity at time t=4.0s]{\includegraphics[width=0.5\textwidth]{vtime800.png}\label{fig:sub3}}
+    \hfill
+    \subfloat[pressure at time t=4.05s]{\includegraphics[width=0.5\textwidth]{ptime800.png}\label{fig:sub2}}
+
+    
 
     \vspace{1em} % Spacing between the rows of images
 
@@ -521,13 +525,14 @@ Finally, Velocity and pressure transition over time are shown in the groups of f
     \hfill
     \subfloat[pressure at time t=7.0s]{\includegraphics[width=0.5\textwidth]{ptime1400.png}\label{fig:sub2}}
 
-        \subfloat[velocity at time t=7.0s]{\includegraphics[width=0.5\textwidth]{vtime1601.png}}\label{fig:sub3}}
+    \subfloat[velocity at time t=8.0s]{\includegraphics[width=0.5\textwidth]{vtime1601.png}\label{fig:sub3}}
     \hfill
-    \subfloat[pressure at time t=7.0s]{\includegraphics[width=0.5\textwidth]{ptime1601.png}}\label{fig:sub2}}
+    \subfloat[pressure at time t=8.0s]{\includegraphics[width=0.5\textwidth]{ptime1601.png}\label{fig:sub2}}
 
     \label{fig:P_V_test2}
 \end{figure}
 
+\newpage
 \subsection{3D Test Cases}
 For the 3D test cases, the flows around a cylinder with square and circular cross-sections are considered. The problem configurations and boundary conditions are illustrated in figure \ref{fig:3D}. The outflow condition can be selected by the user. Some definitions are introduced to specify the values that have to be computed. The height and width of the channel are \(H = 0.41 \, \text{m}\), and the side length and diameter of the cylinder are \(D = 0.1 \, \text{m}\). The characteristic velocity is \(U(t) = \frac{4U(0, H/2, H/2, t)}{9}\), and the Reynolds number is defined by \(Re = \frac{UD}{\nu}\). The drag and lift forces are
 \begin{align*}

@@ -431,14 +431,25 @@ public:
     vmult(TrilinosWrappers::MPI::BlockVector &dst,
           const TrilinosWrappers::MPI::BlockVector &src) const
     {
+      const unsigned int maxiter = 10000;
+      const double tol = 1e-2;
+      SolverControl solver_F(maxiter, tol * src.block(0).l2_norm());
+      SolverGMRES<TrilinosWrappers::MPI::Vector> solver_gmres(solver_F);
 
       tmp.reinit(src.block(1));
-      preconditionerF.vmult(dst.block(0), src.block(0));
+      // preconditionerF.vmult(dst.block(0), src.block(0));
+      solver_gmres.solve(*F, dst.block(0), src.block(0), preconditionerF);
+
       dst.block(1) = src.block(1);
       B->vmult(dst.block(1), dst.block(0));
       dst.block(1).sadd(-1.0, src.block(1));
       tmp = dst.block(1);
-      preconditionerS.vmult(dst.block(1), tmp);
+
+      SolverControl solver_S(maxiter, tol * tmp.l2_norm());
+      SolverCG<TrilinosWrappers::MPI::Vector> solver_cg(solver_S);
+      solver_cg.solve(S, dst.block(1), tmp, preconditionerS);
+      // preconditionerS.vmult(dst.block(1), tmp);
+
       dst.block(0).scale(diag_D);
       dst.block(1) *= 1.0 / alpha;
       B_T->vmult_add(dst.block(0), dst.block(1));

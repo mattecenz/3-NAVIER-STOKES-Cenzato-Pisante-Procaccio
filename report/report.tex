@@ -10,13 +10,13 @@
 \usepackage{hyperref}
 
 \title{Solving the Navier-Stokes Equations: A Finite Element Approach}
-\author{Cenzato, Pisante, Procaccio}
+\author{ Matteo Cenzato, Giuseppe Pisante, Arianna Procaccio}
 \date{\today}
 
 \begin{document}
 \maketitle
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.4\linewidth]{20151029123608!Logo_Politecnico_Milano.png}
     \label{fig:enter-label}
@@ -101,7 +101,7 @@ with \[x =\begin{bmatrix} U_{n+1} \\ P_{n+1} \end{bmatrix}, b=\begin{bmatrix} G 
 
 
 \section{Objective}
-The primary objective of this study is to employ a Finite Element approach to solve the system of equations described earlier. The focus is on utilizing different preconditioners, namely SIMPLE and aSIMPLE. Our analysis will be conducted on a designated test mesh, programmed with .geo file. The key performance metrics for evaluation will be the lift and drag coefficients plotted over time for varying Reynolds numbers.
+The primary objective of this study is to employ a Finite Element approach to solve the system of equations described earlier. The focus is on utilizing different preconditioners, namely SIMPLE and aSIMPLE. Our analysis will be conducted on a designated test mesh, obtained with gmsh through a .geo file. The key performance metrics for evaluation will be the lift and drag coefficients plotted over time for varying Reynolds numbers.
 
 The coefficients, denoted as \(C_D\) (drag coefficient) and \(C_L\) (lift coefficient), are mathematically defined as:
 
@@ -116,11 +116,11 @@ Here, \(F_D\) and \(F_L\) represent the forces acting on the cylindrical obstacl
 \end{align*}
 with the following notations: circle $S$, normal vector $n$ on $S$ with x-component $n_x$ and y-component $n_y$, tangential velocity $v_t$ on $S$, and tangent vector $t = (n_y, -n_x)$. The drag and lift coefficients are
 \begin{align*}
-    c_D &= \frac{2F_D}{\rho U^2D}, 
+    c_D &= \frac{2F_D}{\rho U^2D}, \\
     c_L &= \frac{2F_L}{\rho U^2D}.
 \end{align*}
 
-The parameters \(U\) and \(L\) stand for the reference flow velocity and the cross-sectional length of the obstacle. This investigation aims to provide a comprehensive understanding of the fluid dynamics using advanced numerical methods and preconditioners.
+The parameters \(U\) and \(D\) stand for the reference flow velocity and the cross-sectional length of the obstacle. This investigation aims to provide a comprehensive understanding of the fluid dynamics using advanced numerical methods and preconditioners.
 
 
 
@@ -129,18 +129,17 @@ The domain of computation will be both 2D and 3D as shown in figure \ref{fig:2D}
 \begin{figure}
     \centering
     \includegraphics[width=0.6\linewidth]{2D.png}
-    \caption{Enter Caption}
+    \caption{2D Domain}
     \label{fig:2D}
 \end{figure}
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.6\linewidth]{image.png}
-    \caption{Geometry of 2D test cases with boundary conditions}
+    \caption{Geometry of 3D test cases with boundary conditions}
     \label{fig:3D}
 \end{figure}
 For the 2D test cases the flow around a cylinder with circular cross–section is considered.
-Some definitions are introduced to specify the values which have to be computed. $H = 0.41 \, \text{m}$ is the channel height and $D = 0.1 \, \text{m}$ is the cylinder diameter. The Reynolds number is defined by $Re = \frac{UD}{\nu}$ with the mean velocity $U(t) = \frac{2U(0, H/2, t)}{3}$. 
-The Strouhal number is defined as $St = \frac{Df}{U}$, where $f$ is the frequency of separation. The length of recirculation is $L_a = x_r - x_e$, where $x_e = 0.25$ is the x-coordinate of the end of the cylinder, and $x_r$ is the x-coordinate of the end of the recirculation area. As a further reference value, the pressure difference $\Delta P = \Delta P(t) = P(x_a, y_a, t) - P(x_e, y_e, t)$ is defined, with the front and end point of the cylinder $(x_a, y_a) = (0.15, 0.2)$ and $(x_e, y_e) = (0.25, 0.2)$, respectively.
+Some definitions are introduced to specify the values which have to be computed. $H = 0.41 \, \text{m}$ is the channel height and $D = 0.1 \, \text{m}$ is the cylinder diameter. The Reynolds number is defined by $Re = \frac{UD}{\nu}$ with the mean velocity $U(t) = \frac{2U(0, H/2, t)}{3}$.
 
 \section{C++ Implementation}
 
@@ -148,7 +147,7 @@ The code exhibits a well-structured and object-oriented design, leveraging the c
 
 \subsection{Finite Element Setup}
 
-The finite element setup is a crucial aspect of the code, initiated by the \texttt{setup} method. This method initializes the simulation by creating a mesh, defining finite element spaces, and setting up matrices and vectors for the linear system. The mesh is read from a file, and the degrees of freedom for velocity and pressure are specified.
+The finite element setup is a crucial aspect of the code, initiated by the \texttt{setup} method. This method initializes the simulation by creating a mesh, defining finite element spaces, and setting up matrices and vectors for the linear system. The mesh is read from a .msh file, and the degrees of freedom for velocity and pressure are specified.
 
 \subsection{Assemble of the system}
 
@@ -260,7 +259,7 @@ The aSIMPLE preconditioner is expressed as the product of several matrices:
 \end{equation}
 
 where \(\hat{S}\) and \(\hat{F}\) are approximations of the Schur complement and the factorized form of the SIMPLE preconditioner.
-The approximate SIMPLE method requires the construction of two approximations, denoted as \(\hat{S}^{-1}\) and \(\hat{F}^{-1}\). These approximations are typically defined based on suitable preconditioners for \(\hat{S}^{-1}\) and \(F\).
+The approximate SIMPLE method requires the construction of two approximations, denoted as \(\hat{S}^{-1}\) and \(\hat{F}^{-1}\). These approximations are typically defined based on suitable preconditioners for \(\hat{S}^{-1}\) and \(F\). In our implementation ILU preconditioners where chosen.
 
 
 Regarding the c++ implementation, the \texttt{initialize} method sets up the preconditioner, taking sparse matrices \texttt{F}, \texttt{B}, and \texttt{B\_t}, as well as the solution vector \texttt{sol\_owned}, as input. The diagonal inverse and diagonal vectors (\texttt{diag\_D\_inv} and \texttt{diag\_D}) are constructed from the inverse of the diagonal of \texttt{F}. The matrix \texttt{S} is computed, and preconditioners for \texttt{F} and \texttt{S} are initialized.
@@ -270,14 +269,10 @@ The \texttt{vmult} method applies the aSIMPLE preconditioner to a given block ve
 The class includes constants such as \texttt{alpha} with a value of 0.5, representing a scaling factor. The matrices \texttt{F}, \texttt{B\_T}, and \texttt{B} represent discretized forms of the Navier-Stokes equations. Matrices \texttt{S}, \texttt{diag\_D}, and \texttt{diag\_D\_inv} serve as auxiliary structures in the preconditioning process.
 
 Solver controls (\texttt{SolverControl}) are employed to set maximum iterations (\texttt{maxiter}) and convergence tolerance (\texttt{tol}). The use of GMRES and CG solvers enhances stability and computational efficiency during the iterative solution process.
-\subsubsection{Results}
-The experiments for this problem were carried out on a fine mesh using the aSIMPLE preconditioner. The following visualizations showcase the consistent and relatively lower time required for preconditioner initialization and the time taken to solve the system at each time step.
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.6\textwidth]{timings.png}
-    \caption{Time taken to initialize the preconditioner and solve the system at each time step.}
-\end{figure}
+
+\subsubsection{Results and performance}
+
 The `PreconditionaSIMPLE` preconditioner exhibits notable improvements in construction speed compared to its predecessor, `PreconditionSIMPLE`. These enhancements arise from several key design choices that collectively contribute to a more efficient initialization process. In particular, such performance is related to the fact that the initialization of the SIMPLE preconditioner requires solving two systems at each time-step whereas the aSIMPLE is already an approximation of the inverse of the SIMPLE which implies a lower computational cost.
 
 
@@ -306,9 +301,9 @@ The primary goal of this method is to compute drag and lift forces exerted by th
 The method iterates over active cells, excluding non-locally owned cells. For each cell, finite element values are initialized, and relevant information, including velocity, pressure, and velocity gradients, is extracted. Special attention is given to boundary faces related to the bluff body, whose ID varies from the 2D and 3D implementation as shown in the code.
 
 The drag and lift forces are computed by integrating fluid properties over the boundary faces. The method incorporates the normal and tangent vectors to accurately model the interaction between the fluid and the boundaries. The contributions from each quadrature point are accumulated in \texttt{local\_drag} and \texttt{local\_lift}. This is done to be able to execute such method in parallel, integrating the MPI parallelization by summing the local contributions accross different processes.
-Finally, the mean velocity, useful for the computation of the drag and lift coefficients is computed in the \texttt{InletVelocity} class.
+Finally, the mean velocity, useful for the computation of the drag and lift coefficients is computed in the \texttt{InletVelocity} class through the \texttt{getMeanVelocity()} method.
 
-
+\newpage
 
 
 \section{Test Cases}
@@ -321,19 +316,16 @@ U(0, y) = \frac{4U_m y (H - y)}{H^2}, \quad V = 0
 \]
 with \(U_m = 0.3 \, \text{m/s}\), yielding the Reynolds number \(Re = 20\). 
 
-The problem is solved in a period T=8s and a deltat between each time step of deltat=0.001. 
 Pressure and velocity field over the fine mesh is shown in figure~\ref{fig:v_steady}.
 
-\begin{figure}
+\begin{figure}[H]
     \centering    
-    \subfloat[Velocity field]{\includegraphics[width=0.5\textwidth]{testcase11111.png}\label{fig:v_steady}}
+    \subfloat[Velocity field]{\includegraphics[width=0.4\textwidth]{testcase11111.png}\label{fig:v_steady}}
     \hfill
-    \subfloat[Pressure field]{\includegraphics[width=0.5\textwidth]{pressure_testcase11111.png}\label{fig:sub2}}
-    \caption{Velocity and pressure field}
+    \subfloat[Pressure field]{\includegraphics[width=0.4\textwidth]{pressure_testcase11111.png}\label{fig:sub2}}
 \end{figure}
 
-As we can see from such images, velocity increases once flowing around the bluff body, thus keeping the mass flow rate constant. In addition, the pressure decreases along the \(x\)-axis, accordingly with the energy dissipation due to viscous stresses.
-\vspace{1em} % Spacing between the rows of images
+Velocity increases once flowing around the bluff body, thus keeping the mass flow rate constant. In addition, pressure decreases along the \(x\)-axis, accordingly with the energy dissipation due to viscous stresses.
 
 
 \subsubsection{Test Case 2D-2 (Unsteady)}
@@ -342,21 +334,19 @@ As we can see from such images, velocity increases once flowing around the bluff
     U(0, y, t) = \frac{4U_m y (H - y)}{H^2}, \quad V = 0
     \]
     with \(U_m = 1.5 \, \text{m/s}\), yielding the Reynolds number \(Re = 100\). 
-    Pressure and velocity field over the fine mesh is shown in figure~\ref{fig:Velocity_pressure_2D_test2}.
-In addition, drag coefficient \(c_D\) and lift coefficient \(c_L\) are computed at each time step. In particular, the inlet velocity is kept constant throughout the whole period (0,T) and the initial velocity is null over the whole domain. The value of the lift coefficient tend to decrease over time, resulting in a non-stationarity of the test as shown in figure~\ref{fig:Cd_Cl_2D_test2}.
-\begin{figure}
+In addition, \(c_D\) and \(c_L\) are computed at each time step. In particular, the inlet velocity is kept constant throughout the whole period (0,T) and the initial velocity is null over the whole domain. The value of the lift coefficient tend to decrease over time, accordingly with the non-stationarity of the test as shown in figure~\ref{fig:Cd_2D_test2}.Velocity and pressure transition over time are shown in the groups of figures below:
+\begin{figure}[H]
     \centering
-    \subfloat[Drag coefficient]{\includegraphics[width=0.5\textwidth]{Cd_test2.png}\label{fig:Cd_2D_test2}}
+    \subfloat[Drag coefficient]{\includegraphics[width=0.4\textwidth]{Cd_test2.png}\label{fig:Cd_2D_test2}}
     \hfill
-    \subfloat[Lift coefficient]{\includegraphics[width=0.5\textwidth]{cl_test2.png}\label{fig:Cl_2D_test2}}
-    \caption{CD and CL - test 2 case}
-    \label{fig:general_label}
+    \subfloat[Lift coefficient]{\includegraphics[width=0.4\textwidth]{cl_test2.png}\label{fig:Cl_2D_test2}}
+    \label{fig:Cd_Cl_2D_test2}
 \end{figure}
-Velocity and pressure transition over time are shown in the groups of figures~\ref{fig:P_V_test2} below:
 
-\begin{figure}
+
+\begin{figure}[H]
     \centering    
-    \subfloat[Velocity at time t=0.001s]{\includegraphics[width=0.5\textwidth]{velocity_2D_test2_ts1.png}\label{fig:sub3}}
+    \subfloat[Velocity at time t=0.001s]{\includegraphics[width=0.5\textwidth]{velocity_2D_test2_ts1.png}\label{fig:P_V_test2}}
     \hfill
     \subfloat[Pressure at time t=0.001s]{\includegraphics[width=0.5\textwidth]{pressure_2D_test1b.png}\label{fig:sub2}}
     
@@ -383,10 +373,11 @@ Velocity and pressure transition over time are shown in the groups of figures~\r
     \subfloat[Velocity at time t=0.6s]{\includegraphics[width=0.5\textwidth]{velocity_2D_test2_ts600.png}\label{fig:sub3}}
     \hfill
     \subfloat[Pressure at time t=0.6s]{\includegraphics[width=0.5\textwidth]{pressure_2D_test2_ts600.png}\label{fig:sub2}}
+    \label{fig:Gruppo}
 \end{figure}
 
     \vspace{1em} % Spacing between the rows of images
-\begin{figure}
+\begin{figure}[H]
 \centering
     \subfloat[Velocity at time t=1.2s]{\includegraphics[width=0.5\textwidth]{velocity_2D_test2_ts1200.png}\label{fig:sub3}}
     \hfill
@@ -431,7 +422,13 @@ with \(U_m = 1.5 \, \text{m/s}\), and the time interval is \(0 \leq t \leq 8 \, 
 
 
 \subsubsection*{Results}
+The experiments for this problem were carried out on a fine mesh using the aSIMPLE preconditioner. The following visualizations showcase the consistent and relatively lower time required for preconditioner initialization and the time taken to solve the system at each time step.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{timings.png}
+    \caption{Time taken to initialize the preconditioner and solve the system at each time step.}
+\end{figure}
 
 Moving on, the subsequent images illustrate the forces of drag and lift, along with their coefficients, observed over the course of time steps.
 
@@ -463,7 +460,7 @@ Moving on, the subsequent images illustrate the forces of drag and lift, along w
 \end{figure}
 Such results, particularly from \(t = 4s\) onward, may be influenced by the fact that the inlet velocity undergoes a gradual decrease, indicating an overall deceleration of the flow throughout the domain. In contrast to the time interval \((0-4]s\), during which the pressure decreases along the x-axis, the pressure exhibits an increasing trend along the x-axis in the later time period. 
 
-Finally, Velocity and pressure transition over time are shown in the groups of figures~\ref{fig:P_V_test3} below:
+Finally, Velocity and pressure transition over time are shown in the groups of figures below:
 
 \begin{figure}
     \centering    

@@ -522,7 +522,6 @@ void NavierStokes::compute_forces()
             // Construct the tensor
             Tensor<1, dim> tangent;
             tangent[0] = ny;
-<<<<<<< HEAD
             tangent[1] =-nx;
 						tangent[2] = 0.;
 
@@ -544,17 +543,6 @@ void NavierStokes::compute_forces()
 						+
             current_pressure_values[q] * ny
 						)*fe_face_values.JxW(q);
-=======
-            tangent[1] = -nx;
-
-            local_drag += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * (tangent / tangent.norm_square()) * ny -
-                           current_pressure_values[q] * nx) *
-                          fe_face_values.JxW(q);
-
-            local_lift += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * (tangent / tangent.norm_square()) * nx +
-                           current_pressure_values[q] * ny) *
-                          fe_face_values.JxW(q);
->>>>>>> 03ae2599dee85031667acb8ae13a3bc07ecbd1e3
           }
         }
       }

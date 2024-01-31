@@ -17,7 +17,7 @@ main(int argc, char *argv[])
 
   problem.setup();
   problem.solve();
-  problem.compute_forces();
+  problem.output_results();
 
   return 0;
 }

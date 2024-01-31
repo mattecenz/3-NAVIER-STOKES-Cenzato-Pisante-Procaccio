@@ -139,17 +139,18 @@ public:
     virtual void
     vector_value(const Point<dim> & p, Vector<double> &values) const override
     {
-      values[0] = 4 * u_m * p[1] * (H - p[1]) /** std::sin(M_PI*get_time()/8.)*/ / (H * H);
+      values[0] = 16 * u_m * p[1] * p[2] * (H - p[1]) * (H - p[2]) /** std::sin(M_PI*get_time()/8.)*/ / (H * H * H * H);
+			values[1]=0.;
+			values[2]=0.;
+			values[3]=0.;
 
-      for (unsigned int i = 1; i < dim + 1; ++i)
-        values[i] = 0.0;
     }
 
     virtual double
     value(const Point<dim> & p, const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 4 * u_m * p[1] * (H - p[1]) /**std::sin(M_PI*get_time()/8.)*/ / (H * H);
+       return 16 * u_m * p[1] * p[2] * (H - p[1]) * (H - p[2]) /** std::sin(M_PI*get_time()/8.)*/ / (H * H * H * H);
       else
         return 0;
     }
@@ -157,11 +158,11 @@ public:
     double getMeanVelocity() const
     {
 
-      return 8 * u_m * H / 2 * H / 2 /** std::sin(M_PI*get_time()/8.)*/ / (3.0 * H * H);
+      return u_m /** std::sin(M_PI*get_time()/8.)*/ *4/9;
     }
 
   protected:
-    double H = 0.41;
+    double H = 0.45;
     double u_m = 0.3;
   };
 
@@ -478,16 +479,16 @@ public:
   void
   solve();
 
+	void 
+	output_results();
+
+protected:
+
   // Compute lift and drag.
   void
   compute_forces();
-
-protected:
-  // Drag and lift.
-  double drag;
-  double lift;
-
-  // Assemble system. We also assemble the pressure mass matrix (needed for the
+  
+	// Assemble system. We also assemble the pressure mass matrix (needed for the
   // preconditioner).
   void
   assemble(const double time);
@@ -499,6 +500,11 @@ protected:
   // Output results.
   void
   output(const unsigned int &time_step) const;
+
+	std::vector<double> time_prec;
+	std::vector<double> time_taken;
+	std::vector<double> drag_coeff;
+	std::vector<double> lift_coeff;
 
   // MPI parallel. /////////////////////////////////////////////////////////////
 

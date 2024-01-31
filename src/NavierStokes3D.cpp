@@ -337,32 +337,53 @@ void NavierStokes::assemble(const double time)
         boundary_values, system_matrix, solution, system_rhs, false);
   }
 }
+
 void NavierStokes::solve_time_step()
 {
   pcout << "===============================================" << std::endl;
 
   const unsigned int maxiter = 10000;
-  const double tol = 1e-4 * system_rhs.l2_norm();
+  const double tol = 1e-2 * system_rhs.l2_norm();
 
   SolverControl solver_control(maxiter, tol);
 
   SolverGMRES<TrilinosWrappers::MPI::BlockVector> solver(solver_control);
 
   PreconditionaSIMPLE preconditioner;
-  // PreconditionSIMPLE preconditioner;
+  //PreconditionSIMPLE preconditioner;
+	//PreconditionBlockIdentity preconditioner;
 
   pcout << " Assemblying the preconditioner... " << std::endl;
-  preconditioner.initialize(system_matrix.block(0, 0), system_matrix.block(1, 0), system_matrix.block(0, 1), solution_owned);
-  pcout << "done" << std::endl;
+  
+	const auto t0_p=std::chrono::high_resolution_clock::now();
+
+	preconditioner.initialize(system_matrix.block(0, 0), system_matrix.block(1, 0), system_matrix.block(0, 1), solution_owned);
+  
+	const auto t1_p=std::chrono::high_resolution_clock::now();
+
+	const auto dt_p=std::chrono::duration_cast<std::chrono::milliseconds>(t1_p-t0_p).count();
+
+	pcout << "done" << std::endl;
   pcout << "===============================================" << std::endl;
 
   pcout << "Solving the linear system with expected maxiter: " << maxiter;
   pcout << " and tollerance: " << tol << std::endl;
+	
+	const auto t0_s=std::chrono::high_resolution_clock::now();
+
   solver.solve(system_matrix, solution_owned, system_rhs, preconditioner);
-  pcout << "  " << solver_control.last_step() << " GMRES iterations"
+	
+	const auto t1_s=std::chrono::high_resolution_clock::now();
+
+	const auto dt_s=std::chrono::duration_cast<std::chrono::milliseconds>(t1_s-t0_s).count();
+  
+	pcout << "  " << solver_control.last_step() << " GMRES iterations"
         << std::endl;
 
   solution = solution_owned;
+
+	time_taken.emplace_back(dt_s);
+	time_prec.emplace_back(dt_p);
 }
 
 void NavierStokes::output(const unsigned int &time_step) const
@@ -434,6 +455,7 @@ void NavierStokes::solve()
 
     assemble(time);
     solve_time_step();
+		compute_forces();
     output(time_step);
   }
 }
@@ -458,12 +480,12 @@ void NavierStokes::compute_forces()
   FEValuesExtractors::Vector velocity(0);
   FEValuesExtractors::Scalar pressure(dim);
 
-  drag = 0.0;
-  lift = 0.0;
-
   std::vector<Tensor<1, dim>> current_velocity_values(n_q);
   std::vector<double> current_pressure_values(n_q);
   std::vector<Tensor<2, dim>> current_velocity_gradients(n_q);
+
+	double drag=0.;
+	double lift=0.;
 
   double local_lift = 0.0;
   double local_drag = 0.0;
@@ -484,8 +506,10 @@ void NavierStokes::compute_forces()
       for (unsigned int f = 0; f < cell->n_faces(); ++f)
       {
         if (cell->face(f)->at_boundary() &&
-            (cell->face(f)->boundary_id() == 5 ||
-             cell->face(f)->boundary_id() == 6))
+            (cell->face(f)->boundary_id() == 6 ||
+             cell->face(f)->boundary_id() == 7 ||
+             cell->face(f)->boundary_id() == 8 ||
+             cell->face(f)->boundary_id() == 9))
         {
           fe_face_values.reinit(cell, f);
 
@@ -498,6 +522,29 @@ void NavierStokes::compute_forces()
             // Construct the tensor
             Tensor<1, dim> tangent;
             tangent[0] = ny;
+<<<<<<< HEAD
+            tangent[1] =-nx;
+						tangent[2] = 0.;
+
+            local_drag += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * // This is the tangential component
+						//current_velocity_values[q] * 
+						//tangent / tangent.norm_square() * tangent 
+						( tangent / tangent.norm_square() )
+						* ny 
+						-
+						current_pressure_values[q] * nx
+						)*fe_face_values.JxW(q);
+
+            local_lift -= (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * // This is the tangential components
+						//current_velocity_values[q] * 
+						//tangent / tangent.norm_square() * tangent 
+						( tangent / tangent.norm_square() )
+						* nx 
+						
+						+
+            current_pressure_values[q] * ny
+						)*fe_face_values.JxW(q);
+=======
             tangent[1] = -nx;
 
             local_drag += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * (tangent / tangent.norm_square()) * ny -
@@ -507,6 +554,7 @@ void NavierStokes::compute_forces()
             local_lift += (rho * nu * fe_face_values.normal_vector(q) * current_velocity_gradients[q] * (tangent / tangent.norm_square()) * nx +
                            current_pressure_values[q] * ny) *
                           fe_face_values.JxW(q);
+>>>>>>> 03ae2599dee85031667acb8ae13a3bc07ecbd1e3
           }
         }
       }
@@ -515,11 +563,33 @@ void NavierStokes::compute_forces()
   drag = Utilities::MPI::sum(local_drag, MPI_COMM_WORLD);
   lift = Utilities::MPI::sum(local_lift, MPI_COMM_WORLD);
   pcout << "Drag :\t " << drag << " Lift :\t " << lift << std::endl;
-  // The mean velocity is defined as 2U(0,H/2,t)/3
+  // The meam velocity is defined as 2U(0,H/2,t)/3
   // This is in the case 2D-2 unsteady
-  double mean_v = inlet_velocity.getMeanVelocity();
-  pcout << "Coeff:\t " << (2. * drag) / (mean_v * mean_v * rho * 0.1)
-        << " Coeff:\t " << (2. * lift) / (mean_v * mean_v * rho * 0.1) << std::endl;
+  const double mean_v = inlet_velocity.getMeanVelocity();
+	const double D= 0.1;
+	const double H=0.41;
+
+	const double c_d=(2.*drag)/(rho*mean_v*mean_v*D*H);
+	const double c_l=(2.*lift)/(rho*mean_v*mean_v*D*H);
+
+	pcout << "Coeff:\t " << c_d << " Coeff:\t " << c_l << std::endl;
+
+	drag_coeff.emplace_back(c_d);
+	lift_coeff.emplace_back(c_l);
 
   pcout << "===============================================" << std::endl;
+}
+
+void 
+NavierStokes::output_results()
+{
+
+	std::ofstream results("results_3D.csv");
+
+	results<<"N,T_PREC,T_SOLV,DRAG_C,LIFT_C"<<std::endl;
+	for(size_t i=0;i<time_taken.size();++i)
+		results<<i+1<<","<<time_prec[i]<<","<<time_taken[i]<<","<<drag_coeff[i]<<","<<lift_coeff[i]<<std::endl;
+
+	results.close();
+
 }

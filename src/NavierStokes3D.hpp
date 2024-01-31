@@ -328,24 +328,23 @@ public:
     void
     initialize(const TrilinosWrappers::SparseMatrix &F_,
                const TrilinosWrappers::SparseMatrix &B_,
-               const TrilinosWrappers::SparseMatrix &B_t)
+               const TrilinosWrappers::SparseMatrix &B_t,
+               const TrilinosWrappers::MPI::BlockVector &sol_owned)
     {
       F = &F_;
       B = &B_;
       B_T = &B_t;
 
-      // Construct the inverse of the diagonal
-      TrilinosWrappers::MPI::Vector diagonal;
-      diagonal = 0.0;
-      for (size_t i = 0; i < F_.m(); ++i)
+      diag_D_inv.reinit(sol_owned.block(0));
+
+      for (unsigned int i : diag_D_inv.locally_owned_elements())
       {
-        diagonal[i] = 1. / F_.diag_element(i);
-        // Save it also in the sparse matrix
-        D_inv.set(i, i, 1. / F_.diag_element(i));
+        double temp = F->diag_element(i);
+        diag_D_inv[i] = 1.0 / temp;
       }
 
       // Create S_tilde
-      B_.mmult(S_tilde, B_t, diagonal);
+      B_.mmult(S_tilde, B_t, diag_D_inv);
 
       // Initialize the preconditioners
       preconditioner_F.initialize(*F);
@@ -378,11 +377,12 @@ public:
 
       dst.block(1) = y_p;
       dst.block(1) *= 1. / alpha;
-      temp_1.reinit(dst.block(0));
+      //temp_1.reinit(dst.block(0));
 
-      B_T->vmult(temp_1, dst.block(1));
+      B_T->vmult(dst.block(0), dst.block(1));
       // Cannot be same vector
-      D_inv.vmult(dst.block(0), temp_1);
+      //D_inv.vmult(dst.block(0), temp_1);
+      dst.block(0).scale(diag_D_inv);
       dst.block(0) -= y_u;
       dst.block(0) *= -1.;
     }
@@ -394,7 +394,7 @@ public:
     const TrilinosWrappers::SparseMatrix *B_T;
     const TrilinosWrappers::SparseMatrix *B;
     TrilinosWrappers::SparseMatrix S_tilde;
-    TrilinosWrappers::SparseMatrix D_inv;
+    TrilinosWrappers::MPI::Vector diag_D_inv;
     TrilinosWrappers::PreconditionILU preconditioner_F;
     TrilinosWrappers::PreconditionILU preconditioner_S;
   };

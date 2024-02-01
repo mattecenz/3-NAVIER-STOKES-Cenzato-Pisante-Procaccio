@@ -531,19 +531,10 @@ Finally, Velocity and pressure transition over time are shown in the groups of f
 
 \newpage
 \subsection{3D Test Cases}
-For the 3D test cases, the flows around a cylinder with square and circular cross-sections are considered. The problem configurations and boundary conditions are illustrated in figure \ref{fig:3D}. The outflow condition can be selected by the user. Some definitions are introduced to specify the values that have to be computed. The height and width of the channel are \(H = 0.41 \, \text{m}\), and the side length and diameter of the cylinder are \(D = 0.1 \, \text{m}\). The characteristic velocity is \(U(t) = \frac{4U(0, H/2, H/2, t)}{9}\), and the Reynolds number is defined by \(Re = \frac{UD}{\nu}\). The drag and lift forces are
-\begin{align*}
-    F_D &= \int_S \left(\rho\nu \frac{\partial v_t}{\partial n}n_y - p n_x\right) \, dS, \\
-    F_L &= -\int_S \left(\rho\nu \frac{\partial v_t}{\partial n}n_x + P n_y\right) \, dS,
-\end{align*}
-with the following notations: surface of the cylinder \(S\), normal vector \(n\) on \(S\) with x-component \(n_x\) and y-component \(n_y\), tangential velocity \(v_t\) on \(S\), and tangent vector \(t = (n_y, -n_x, 0)\). The drag and lift coefficients are
-\begin{align*}
-    c_D &= \frac{2F_D}{\rho U^2 D H}, \\
-    c_L &= \frac{2F_L}{\rho U^2 D H}.
-\end{align*}
-The Strouhal number is \(St = \frac{Df}{U}\) with the frequency of separation \(f\), and a pressure difference is defined by \(\Delta P = \Delta P(t) = P(x_a, y_a, z_a, t) - P(x_e, y_e, z_e, t)\) with coordinates \((x_a, y_a, z_a) = (0.45, 0.20, 0.205)\) and \((x_e, y_e, z_e) = (0.55, 0.20, 0.205)\).
-\subsubsection{Test Cases 3D-1Q and 3D-1Z (Steady)}
 
+For the 3D test cases, the definitions above remain the same except for the tangent vector, which becomes \(t = (n_y, -n_x, 0)\).
+
+\subsubsection{Test Cases steady}
 
 The inflow condition is given by:
 \[
@@ -557,10 +548,82 @@ To solve this problem, we exclusively used the aSIMPLE preconditioner with \(\De
 
 For each time step, we present the time taken to construct the preconditioner, the time taken to solve the problem, and both the drag and lift coefficients. The parallel implementation utilized 5 physical cores, and the tests were conducted on both coarse and fine meshes.
 
-Observations indicate that the time required to build the preconditioner remains consistent, while the time to solve the problem varies significantly, sometimes even becoming smaller then the preconditioner. This variation can be attributed to the steady nature of the problem, where the solution stabilizes over time, necessitating fewer iterations for problem resolution.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{time_prec.png}
+    \caption{Time taken to initialize the preconditioner at each time step.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{time_syst.png}
+    \caption{Time taken to solve the system at each time step.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{drag_coeff.png}
+    \caption{Drag coefficient over time.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{lift_coeff.png}
+    \caption{Lift coefficient over time.}
+\end{figure}
+
+Observations indicate that the time required to build the preconditioner remains consistent with a notable difference between single and multicore. 
+The time to solve the problem varies significantly instead, it becomes even smaller then the preconditioner. This variation can be attributed to the steady nature of the problem, where the solution stabilizes over time, necessitating fewer iterations for problem resolution.
 
 No substantial differences were observed elsewhere; the drag and lift coefficients over time remained relatively consistent regardless of the mesh granularity.
 
+We can observe also the difference in the time taken to solve the problem between the preconditioned and non preconditioned system in a coarse mesh:
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{diff_prec.png}
+    \caption{Differences between aSIMPLE and no preconditioning.}
+\end{figure}
+
+The interesting result is that for a coarse mesh the time taken to solve the problem is even lower then the preconditioned system. But there are 2 main problems with this statement: first, the time at \(t=0.05s\) (first step) is not shown because the actual time taken is \(20s\) . Second, the system with no preconditioner is solved using a higher tollerance, because the norm of the residual in this case stabilizes around \(0.001\) after a few iterations and it does not go lower.
+
+Below are some figures for reference taken at \(t=4.0s\) of the 3D solution for both a coarse and fine meshes.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{velocity_coarse_4s.png}
+    \caption{Velocity in a coarse mesh.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{pressure_coarse_4s.png}
+    \caption{Pressure in a coarse mesh.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{velocity_fine_4s.png}
+    \caption{Velocity in a fine mesh.}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{pressure_fine_4s.png}
+    \caption{Velocity in a coarse mesh.}
+\end{figure}
+
+\subsubsection{Test Cases unsteady }
+
+For the unsteady problems described in the reference paper, no results of convergence were shown usign both a fine and coarse mesh, no matter the timestep used.
+
+After more or less \(t=0.2s\) the solution would blow up, as shown in the figure below.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{velocity_noconv_01s.png}
+    \caption{Velocity in an unsteady case at \(t=0.1s\) in a fine mesh. After this, the problem starts to diverge.}
+\end{figure}
 
 \section{Parallelization}
 

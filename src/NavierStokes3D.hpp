@@ -162,8 +162,8 @@ public:
     }
 
   protected:
-    double H = 0.45;
-    double u_m = 0.3;
+    double H = 0.41;
+    double u_m = 2.25;
   };
 
   // Since we're working with block matrices, we need to make our own

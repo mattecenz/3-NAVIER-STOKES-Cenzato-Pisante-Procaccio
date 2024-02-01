@@ -531,12 +531,9 @@ protected:
   // Problem definition. ///////////////////////////////////////////////////////
 
   // Kinematic viscosity [m2/s].
-  const double nu = 1;
+  const double nu = 1e-3;
 
   const double rho = 1.;
-
-  // Outlet pressure [Pa].
-  const double p_out = 10;
 
   // Forcing term.
   ForcingTerm forcing_term;

@@ -27,7 +27,7 @@
 \newpage
 \tableofcontents
 
-
+\newpage
 \section*{Introduction}
 
 This report aims to solve the unsteady, incompressible Navier-Stokes equations using the finite element method. The focus is to simulate the benchmark problem "flow past a cylinder" in two and three dimensions considering different values of the Reynolds number (\(Re \leq 200\)).
@@ -126,7 +126,7 @@ The parameters \(U\) and \(D\) stand for the reference flow velocity and the cro
 
 \section{Domain of Computation}
 The domain of computation will be both 2D and 3D as shown in figure \ref{fig:2D} and figure \ref{fig:3D}:
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=0.6\linewidth]{2D.png}
     \caption{2D Domain}
@@ -134,12 +134,13 @@ The domain of computation will be both 2D and 3D as shown in figure \ref{fig:2D}
 \end{figure}
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.6\linewidth]{image.png}
+    \includegraphics[width=0.4\linewidth]{image.png}
     \caption{Geometry of 3D test cases with boundary conditions}
     \label{fig:3D}
 \end{figure}
 For the 2D test cases the flow around a cylinder with circular cross–section is considered.
 Some definitions are introduced to specify the values which have to be computed. $H = 0.41 \, \text{m}$ is the channel height and $D = 0.1 \, \text{m}$ is the cylinder diameter. The Reynolds number is defined by $Re = \frac{UD}{\nu}$ with the mean velocity $U(t) = \frac{2U(0, H/2, t)}{3}$.
+
 
 \section{C++ Implementation}
 
@@ -273,7 +274,25 @@ Solver controls (\texttt{SolverControl}) are employed to set maximum iterations 
 
 \subsubsection{Results and performance}
 
-The `PreconditionaSIMPLE` preconditioner exhibits notable improvements in construction speed compared to its predecessor, `PreconditionSIMPLE`. These enhancements arise from several key design choices that collectively contribute to a more efficient initialization process. In particular, such performance is related to the fact that the initialization of the SIMPLE preconditioner requires solving two systems at each time-step whereas the aSIMPLE is already an approximation of the inverse of the SIMPLE which implies a lower computational cost.
+The `PreconditionaSIMPLE` preconditioner exhibits some improvements in construction speed compared to its predecessor, `PreconditionSIMPLE`as shown in figure~\ref{fig:Time_prec}.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Time creation Preconditioners.png}
+    \caption{Time taken to initialize the preconditioner at each time step.}
+    \label{fig:Time_prec}
+\end{figure}
+
+In addition, the time to solve each time step was compared in figure~\ref{fig:Time_solve}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Time solve.png}
+    \caption{Time taken to solve the system at each time step.}
+    \label{fig:Time_solve}
+\end{figure}
+
+Such image shows a slightly better performance of the SIMPLE preconditioner. This could be due to the fact that the SIMPLE preconditioner better approximates A^{-1}. In fact, since the aSIMPLE is an approximation of the SIMPLE preconditioner, this is coherent with the theory. 
+
+Finally, the number of iterations to solve the system at each time step are comparable.
 
 
 \subsection{Solver Algorithms}
@@ -534,7 +553,7 @@ Finally, Velocity and pressure transition over time are shown in the groups of f
 
 For the 3D test cases, the definitions above remain the same except for the tangent vector, which becomes \(t = (n_y, -n_x, 0)\).
 
-\subsubsection{Test Cases steady}
+\subsubsection{Test Cases unsteady 1}
 
 The inflow condition is given by:
 \[
@@ -550,26 +569,15 @@ For each time step, we present the time taken to construct the preconditioner, t
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.6\textwidth]{time_prec.png}
-    \caption{Time taken to initialize the preconditioner at each time step.}
-\end{figure}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.6\textwidth]{time_syst.png}
-    \caption{Time taken to solve the system at each time step.}
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.6\textwidth]{drag_coeff.png}
-    \caption{Drag coefficient over time.}
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.6\textwidth]{lift_coeff.png}
-    \caption{Lift coefficient over time.}
+    \subfloat[Time taken to initialize the preconditioner at each time step.]{\includegraphics[width=0.5\textwidth]{time_prec.png}\label{fig:sub3}}
+    \hfill
+    \subfloat[Drag coefficient over time.]{\includegraphics[width=0.5\textwidth]{time_syst.png}\label{fig:sub2}}
+\vspace{1em} % Spacing between the rows of images
+    \subfloat[Drag coefficient over time.]{\includegraphics[width=0.5\textwidth]{drag_coeff.png}\label{fig:sub3}}
+    \hfill
+    \subfloat[Lift coefficient over time.]{\includegraphics[width=0.5\textwidth]{lift_coeff.png}\label{fig:sub2}}
+\vspace{1em} % Spacing between the rows of images
 \end{figure}
 
 Observations indicate that the time required to build the preconditioner remains consistent with a notable difference between single and multicore. 
@@ -591,37 +599,27 @@ Below are some figures for reference taken at \(t=4.0s\) of the 3D solution for 
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.6\textwidth]{velocity_coarse_4s.png}
-    \caption{Velocity in a coarse mesh.}
+    
+    \subfloat[Velocity field in a coarse mesh.]{\includegraphics[width=0.4\textwidth]{velocity_coarse_4s.png}\label{fig:sub3}}
+    \hfill
+    \subfloat[Pressure field in a coarse mesh.]{\includegraphics[width=0.4\textwidth]{pressure_coarse_4s.png}\label{fig:sub2}}
+    
+    \vspace{1em} % Spacing between the rows of images
+    
+    \subfloat[Velocity field in a fine mesh.]{\includegraphics[width=0.4\textwidth]{velocity_fine_4s.png}\label{fig:sub3}}
+    \hfill
+    \subfloat[Pressure field in a fine mesh.]{\includegraphics[width=0.4\textwidth]{pressure_fine_4s.png}\label{fig:sub2}}
 \end{figure}
+\newpage
+\subsubsection{Test Cases unsteady 2}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.6\textwidth]{pressure_coarse_4s.png}
-    \caption{Pressure in a coarse mesh.}
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.6\textwidth]{velocity_fine_4s.png}
-    \caption{Velocity in a fine mesh.}
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.6\textwidth]{pressure_fine_4s.png}
-    \caption{Velocity in a coarse mesh.}
-\end{figure}
-
-\subsubsection{Test Cases unsteady }
-
-For the unsteady problems described in the reference paper, no results of convergence were shown usign both a fine and coarse mesh, no matter the timestep used.
+For the unsteady problems described in the reference paper as test case 3, no results of convergence were shown usign both a fine and coarse mesh, no matter the timestep used.
 
 After more or less \(t=0.2s\) the solution would blow up, as shown in the figure below.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\textwidth]{velocity_noconv_01s.png}
+    \includegraphics[width=0.5\textwidth]{velocity_noconv_01s.png}
     \caption{Velocity in an unsteady case at \(t=0.1s\) in a fine mesh. After this, the problem starts to diverge.}
 \end{figure}
 

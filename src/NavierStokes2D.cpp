@@ -324,13 +324,8 @@ void NavierStokes::assemble(const double &time)
                                                  {true, true, false}));
 
     boundary_functions.clear();
-    for (unsigned int i = 1; i < 7; ++i)
-    {
-      if (i != 1 && i != 3)
-      {
-        boundary_functions[i] = &function_g;
-      }
-    }
+    boundary_functions[5] = &function_g;
+    boundary_functions[6] = &function_g;
     VectorTools::interpolate_boundary_values(dof_handler,
                                              boundary_functions,
                                              boundary_values,
